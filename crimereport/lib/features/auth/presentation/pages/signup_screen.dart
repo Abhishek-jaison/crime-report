@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:crimereport/core/services/auth_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -88,6 +89,10 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() => _isLoading = false);
 
       if (result['success']) {
+        // Save email locally
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_email', _emailController.text.trim());
+
         _showSnackBar('Account Created Successfully! Please Login.');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const LoginScreen()),

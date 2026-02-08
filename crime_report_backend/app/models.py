@@ -20,3 +20,18 @@ class OTP(Base):
     otp = Column(String)
     expires_at = Column(DateTime(timezone=True))
     is_verified = Column(Boolean, default=False)
+
+class Complaint(Base):
+    __tablename__ = "complaints"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    description = Column(String)
+    crime_type = Column(String)
+    user_email = Column(String, ForeignKey("users.email"))
+    image_path = Column(String, nullable=True)
+    video_path = Column(String, nullable=True)
+    status = Column(String, default="Pending")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    user = relationship("User", backref="complaints")

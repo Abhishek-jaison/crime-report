@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:crimereport/core/services/auth_service.dart';
 import 'package:crimereport/features/home/presentation/pages/home_screen.dart';
 import 'package:crimereport/features/auth/presentation/pages/signup_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,6 +47,11 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Login Successful!')));
+
+        // Save email locally
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_email', email);
+
         // Navigate to Home Screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),

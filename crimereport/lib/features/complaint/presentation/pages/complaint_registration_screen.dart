@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:crimereport/features/complaint/data/models/complaint_model.dart';
+import 'package:crimereport/core/services/complaint_service.dart';
+import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
 
 class ComplaintRegistrationScreen extends StatefulWidget {
   const ComplaintRegistrationScreen({super.key});
@@ -61,29 +62,34 @@ class _ComplaintRegistrationScreenState
         _isSubmitting = true;
       });
 
-      // Create Complaint Model
-      final newComplaint = ComplaintModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _titleController.text.trim(),
-        description: _descriptionController.text.trim(),
-        crimeType: _selectedCrimeType!,
-        imagePath: _selectedImage?.path,
-        videoPath: _selectedVideo?.path,
-        timestamp: DateTime.now(),
-      );
-
       try {
-        // Save to SharedPreferences (Simulating Local Database)
+        // Get user email
         final prefs = await SharedPreferences.getInstance();
-        final List<String> existingComplaints =
-            prefs.getStringList('complaints') ?? [];
+        final userEmail = prefs.getString('user_email');
 
-        // Add new complaint as JSON string
-        existingComplaints.add(newComplaint.toJson());
-        await prefs.setStringList('complaints', existingComplaints);
+        if (userEmail == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('User not logged in. Please login again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginScreen()),
+          );
+          return;
+        }
 
-        // Simulate network delay for realism
-        await Future.delayed(const Duration(seconds: 1));
+        final complaintService = ComplaintService();
+        final result = await complaintService.submitComplaint(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          crimeType: _selectedCrimeType!,
+          userEmail: userEmail,
+          image: _selectedImage,
+          video: _selectedVideo,
+        );
 
         if (!mounted) return;
 
@@ -91,25 +97,31 @@ class _ComplaintRegistrationScreenState
           _isSubmitting = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Complaint Submitted Successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Complaint Submitted Successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
 
-        // Clear form
-        _formKey.currentState!.reset();
-        _titleController.clear();
-        _descriptionController.clear();
-        setState(() {
-          _selectedImage = null;
-          _selectedVideo = null;
-          _selectedCrimeType = null;
-        });
-
-        // Optionally navigate back
-        // Navigator.of(context).pop();
+          // Clear form
+          _formKey.currentState!.reset();
+          _titleController.clear();
+          _descriptionController.clear();
+          setState(() {
+            _selectedImage = null;
+            _selectedVideo = null;
+            _selectedCrimeType = null;
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Submission Failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       } catch (e) {
         if (!mounted) return;
         setState(() {
