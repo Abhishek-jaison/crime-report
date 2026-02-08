@@ -10,6 +10,13 @@ class UserCreate(UserBase):
 class UserLogin(UserBase):
     password: str
 
+class OTPRequest(BaseModel):
+    email: EmailStr
+
+class OTPVerify(BaseModel):
+    email: EmailStr
+    otp: str
+
 class User(UserBase):
     id: int
     is_active: bool = True

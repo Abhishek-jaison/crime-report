@@ -12,3 +12,11 @@ class User(Base):
     aadhaar_number = Column(String, nullable=True) # Added field
     hashed_password = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class OTP(Base):
+    __tablename__ = "otps"
+
+    email = Column(String, primary_key=True, index=True)
+    otp = Column(String)
+    expires_at = Column(DateTime(timezone=True))
+    is_verified = Column(Boolean, default=False)
