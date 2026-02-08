@@ -1,0 +1,35 @@
+# Flutter/Dart
+.dart_tool/
+.idea/
+.vscode/
+
+build/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+
+# Android
+android/local.properties
+android/key.properties
+*.keystore
+
+# Python/FastAPI (Backend)
+crime_report_backend/venv/
+crime_report_backend/__pycache__/
+crime_report_backend/*.pyc
+crime_report_backend/.env
+crime_report_backend/*.db
+crime_report_backend/.pytest_cache/
+crime_report_backend/dist/
+crime_report_backend/build/
+crime_report_backend/*.egg-info/
+crime_report_backend/add_column.py # Temporary migration script
+
+# OS Specific
+.DS_Store
+Thumbs.db
