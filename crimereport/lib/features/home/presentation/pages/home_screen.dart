@@ -7,7 +7,8 @@ import 'package:crimereport/features/complaint/presentation/pages/complaint_regi
 import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
 import 'package:crimereport/core/services/police_station_service.dart';
 import 'package:crimereport/features/home/data/models/police_station_model.dart';
-import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
+
+import 'package:crimereport/features/profile/presentation/pages/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,24 +19,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   PoliceStation? _nearestStation;
-  // Navigation Index
   int _selectedIndex = 0;
+  String? _userName;
 
   @override
   void initState() {
     super.initState();
+    _loadUserData();
     _fetchNearestPoliceStation();
   }
 
-  Future<void> _logout(BuildContext context) async {
+  Future<void> _loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
-
-    if (context.mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
-    }
+    setState(() {
+      _userName = prefs.getString('user_name');
+    });
   }
 
   Future<void> _sendSOSMessage() async {
@@ -179,10 +177,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               "Welcome back,",
               style: TextStyle(
                 fontSize: 14,
@@ -190,10 +188,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
-              "John Doe", // Placeholder name
-              style: TextStyle(
+              _userName ?? "User",
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF1E1E1E),
@@ -201,30 +199,36 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE0CBA8), // Placeholder avatar color
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            image: const DecorationImage(
-              // Using a generic placeholder if no image
-              image: NetworkImage(
-                "https://i.pravatar.cc/150?img=11",
-              ), // Mock image
-              fit: BoxFit.cover,
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const ProfileScreen()),
+            );
+          },
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0CBA8), // Placeholder avatar color
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              image: const DecorationImage(
+                image: NetworkImage(
+                  "https://i.pravatar.cc/150?img=11",
+                ), // Mock image
+                fit: BoxFit.cover,
+              ),
             ),
-          ),
-          child: Align(
-            alignment: Alignment.bottomRight,
-            child: Container(
-              width: 12,
-              height: 12,
-              decoration: BoxDecoration(
-                color: Colors.green,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+            child: Align(
+              alignment: Alignment.bottomRight,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
               ),
             ),
           ),
@@ -621,8 +625,9 @@ class _HomeScreenState extends State<HomeScreen> {
         if (index == 0) {
           // Home
         } else if (index == 3) {
-          // Profile -> Logout logic for now
-          _logout(context);
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          );
         }
       },
       type: BottomNavigationBarType.fixed,

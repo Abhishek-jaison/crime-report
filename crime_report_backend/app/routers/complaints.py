@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
-from .. import schemas, models, database
+from .. import schemas, models, database, crud
 import shutil
 import os
 import uuid
@@ -68,3 +68,12 @@ def create_complaint(
     db.refresh(new_complaint)
     
     return new_complaint
+
+@router.get("/my-complaints", response_model=list[schemas.Complaint])
+def get_my_complaints(user_email: str, db: Session = Depends(database.get_db)):
+    # Verify user exists
+    user = db.query(models.User).filter(models.User.email == user_email).first()
+    if not user:
+         raise HTTPException(status_code=404, detail="User not found")
+         
+    return crud.get_user_complaints(db=db, user_email=user_email)

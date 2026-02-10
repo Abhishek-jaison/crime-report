@@ -59,4 +59,9 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     if not utils.verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
         
-    return {"message": "Login successful", "user_id": db_user.id}
+    return {
+        "message": "Login successful", 
+        "user_id": db_user.id,
+        "name": db_user.name,
+        "email": db_user.email
+    }

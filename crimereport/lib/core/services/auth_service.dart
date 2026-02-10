@@ -6,6 +6,7 @@ class AuthService {
   static const String baseUrl = 'http://10.0.2.2:8000';
 
   Future<Map<String, dynamic>> signup(
+    String name,
     String email,
     String password,
     String aadhaarNumber,
@@ -17,6 +18,7 @@ class AuthService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
+          'name': name,
           'email': email,
           'password': password,
           'aadhaar_number': aadhaarNumber,

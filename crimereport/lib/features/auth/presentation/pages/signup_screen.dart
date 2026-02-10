@@ -13,9 +13,8 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  // We need distinct controllers for each OTP digit or one controller and split logic
-  // For simplicity, let's use one controller but display boxes
   final _otpController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -28,17 +27,18 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  // Timer logic
   Timer? _timer;
   int _start = 60;
   bool _canResend = false;
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _otpController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _aadhaarController.dispose();
     _timer?.cancel();
     super.dispose();
   }
@@ -73,7 +73,6 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _sendOtp() async {
-    // Basic email validation before sending
     final email = _emailController.text.trim();
     if (email.isEmpty || !email.contains('@')) {
       _showSnackBar('Please enter a valid email address.', isError: true);
@@ -106,9 +105,6 @@ class _SignupScreenState extends State<SignupScreen> {
         return;
       }
 
-      // Verify OTP and then Signup
-      // Note: In a real app, you might verify OTP endpoints separately or send OTP with signup
-      // adhering to existing "verifyOtp" then "signup" logic
       setState(() => _isLoading = true);
 
       // 1. Verify OTP
@@ -124,27 +120,19 @@ class _SignupScreenState extends State<SignupScreen> {
       }
 
       // 2. Signup
-      // Note: Aadhaar field was requested in previous tasks but not in the screenshot.
-      // Keeping hardcoded or hidden for UI match, or adding as a field.
-      // Screenshot doesn't show Aadhaar. I will pass a dummy or empty for now
-      // to match UI strictly, assuming backend handles optional.
-      // Wait, backend likely REQUIRES aadhaar based on previous tasks.
-      // I will add a hidden/default value or if strict UI match, maybe strict UI match implies
-      // hiding it. I'll pass a placeholder "000000000000" if not in UI, or add it if vital.
-      // Let's stick to the UI Screenshot which has NO Aadhaar.
-      // Passing dummy aadhaar to satisfy existing API signature.
       final signupResult = await _authService.signup(
+        _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text.trim(),
-        "000000000000", // Dummy Aadhaar to satisfy backend signature
+        "000000000000",
       );
 
       setState(() => _isLoading = false);
 
       if (signupResult['success']) {
-        // Save email
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_email', _emailController.text.trim());
+        await prefs.setString('user_name', _nameController.text.trim());
 
         _showSnackBar('Account Created Successfully!');
         Navigator.of(context).pushReplacement(
@@ -160,9 +148,6 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildOtpBox(int index) {
-    // A visual representation only, creating separate controllers for real logic is better
-    // but for this UI demo with single controller:
-    // We map global controller text to boxes.
     String char = "";
     if (_otpController.text.length > index) {
       char = _otpController.text[index];
@@ -245,7 +230,45 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   const SizedBox(height: 40),
 
-                  // Email Field with "SEND OTP" button
+                  // Full Name Field
+                  const Text(
+                    "Full Name",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF424242),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      hintText: "John Doe",
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your full name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Email Field
                   const Text(
                     "College Email",
                     style: TextStyle(
@@ -273,7 +296,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
-                      // SEND OTP Button inside suffix
                       suffixIcon: Container(
                         margin: const EdgeInsets.only(right: 8),
                         child: TextButton(
@@ -302,7 +324,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
                   const SizedBox(height: 24),
 
-                  // Verification Code Visuals + Invisible Input
+                  // OTP Field
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -327,10 +349,8 @@ class _SignupScreenState extends State<SignupScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Custom OTP Row
                   Stack(
                     children: [
-                      // Invisible TextField to capture input
                       Opacity(
                         opacity: 0.0,
                         child: TextFormField(
@@ -340,7 +360,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           onChanged: (val) => setState(() {}),
                         ),
                       ),
-                      // Visible Boxes
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: List.generate(
@@ -545,9 +564,7 @@ class _SignupScreenState extends State<SignupScreen> {
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                25,
-                              ), // More rounded as per screenshot
+                              borderRadius: BorderRadius.circular(25),
                             ),
                             elevation: 0,
                           ),
@@ -562,7 +579,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Bottom Indicator logic or text if needed
                   Center(
                     child: Container(
                       width: 100,

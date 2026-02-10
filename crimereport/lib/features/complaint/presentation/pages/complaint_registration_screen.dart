@@ -41,7 +41,11 @@ class _ComplaintRegistrationScreenState
     if (image != null) {
       setState(() {
         _selectedImage = File(image.path);
-        _selectedVideo = null;
+        // _selectedVideo = null; // Allow both? Screenshot implies multiple media.
+        // For now, sticking to logic of one or the other or both?
+        // The UI shows placeholders for both. Let's allow both if existing logic supports it.
+        // Existing logic in `submitComplaint` sends both `image` and `video` params.
+        // So I will NOT clear the other one.
       });
     }
   }
@@ -51,9 +55,21 @@ class _ComplaintRegistrationScreenState
     if (video != null) {
       setState(() {
         _selectedVideo = File(video.path);
-        _selectedImage = null;
+        // _selectedImage = null; // See above
       });
     }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _selectedImage = null;
+    });
+  }
+
+  void _removeVideo() {
+    setState(() {
+      _selectedVideo = null;
+    });
   }
 
   Future<void> _submitComplaint() async {
@@ -63,7 +79,6 @@ class _ComplaintRegistrationScreenState
       });
 
       try {
-        // Get user email
         final prefs = await SharedPreferences.getInstance();
         final userEmail = prefs.getString('user_email');
 
@@ -105,7 +120,6 @@ class _ComplaintRegistrationScreenState
             ),
           );
 
-          // Clear form
           _formKey.currentState!.reset();
           _titleController.clear();
           _descriptionController.clear();
@@ -137,146 +151,330 @@ class _ComplaintRegistrationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Register Complaint')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Title Field
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Complaint Title',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a title';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blue),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        centerTitle: true,
+        title: const Text(
+          "Register Complaint",
+          style: TextStyle(
+            color: Color(0xFF1E1E1E),
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader("INCIDENT DETAILS"),
+                const SizedBox(height: 16),
 
-              // Crime Type Dropdown
-              DropdownButtonFormField<String>(
-                value: _selectedCrimeType,
-                decoration: const InputDecoration(
-                  labelText: 'Crime Type',
-                  border: OutlineInputBorder(),
-                ),
-                items: _crimeTypes.map((type) {
-                  return DropdownMenuItem(value: type, child: Text(type));
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCrimeType = value;
-                  });
-                },
-                validator: (value) =>
-                    value == null ? 'Please select a crime type' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // Description Field
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 5,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                  alignLabelWithHint: true,
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please provide a description';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Media Picker Section
-              Text(
-                'Attach Evidence (Optional)',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.image),
-                    label: const Text('Add Image'),
+                // Complaint Title
+                const Text(
+                  "Complaint Title",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF424242),
                   ),
-                  ElevatedButton.icon(
-                    onPressed: _pickVideo,
-                    icon: const Icon(Icons.videocam),
-                    label: const Text('Add Video'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Media Preview
-              if (_selectedImage != null)
-                Container(
-                  height: 200,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Image.file(_selectedImage!, fit: BoxFit.cover),
                 ),
-              if (_selectedVideo != null)
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _titleController,
+                  decoration: _buildInputDecoration(
+                    "Brief summary of incident",
+                  ),
+                  validator: (value) => (value == null || value.isEmpty)
+                      ? 'Please enter a title'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+
+                // Crime Type
+                const Text(
+                  "Crime Type",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF424242),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _selectedCrimeType,
+                  items: _crimeTypes.map((type) {
+                    return DropdownMenuItem(value: type, child: Text(type));
+                  }).toList(),
+                  onChanged: (value) =>
+                      setState(() => _selectedCrimeType = value!),
+                  decoration: _buildInputDecoration("Select category"),
+                  validator: (value) =>
+                      value == null ? 'Please select a crime type' : null,
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.grey,
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+                _buildSectionHeader("DETAILED DESCRIPTION"),
+                const SizedBox(height: 16),
+
+                // Description
+                TextFormField(
+                  controller: _descriptionController,
+                  maxLines: 5,
+                  decoration: _buildInputDecoration(
+                    "Please provide as much detail as possible, including date, time, and location...",
+                  ).copyWith(contentPadding: const EdgeInsets.all(16)),
+                  validator: (value) => (value == null || value.isEmpty)
+                      ? 'Please provide a description'
+                      : null,
+                ),
+
+                const SizedBox(height: 24),
+                _buildSectionHeader("EVIDENCE & ATTACHMENTS"),
+                const SizedBox(height: 16),
+
+                // Attachment Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildAttachmentButton(
+                        icon: Icons.add_a_photo,
+                        label: "Add Photo",
+                        onTap: _pickImage,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildAttachmentButton(
+                        icon: Icons.videocam,
+                        label: "Add Video",
+                        onTap: _pickVideo,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Previews
+                if (_selectedImage != null || _selectedVideo != null)
+                  Row(
+                    children: [
+                      if (_selectedImage != null)
+                        _buildMediaPreview(
+                          _selectedImage!,
+                          Icons.image,
+                          _removeImage,
+                        ),
+                      if (_selectedImage != null && _selectedVideo != null)
+                        const SizedBox(width: 16),
+                      if (_selectedVideo != null)
+                        _buildMediaPreview(
+                          _selectedVideo!,
+                          Icons.video_file,
+                          _removeVideo,
+                        ),
+                    ],
+                  ),
+
+                const SizedBox(height: 24),
+
+                // Info Box
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey[200],
+                    color: const Color(0xFFE3F2FD),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFBBDEFB)),
                   ),
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.video_file, size: 40),
-                      const SizedBox(width: 16),
+                      const Icon(
+                        Icons.info,
+                        color: Color(0xFF1E88E5),
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Video Selected: ${_selectedVideo!.path.split('/').last}',
-                          overflow: TextOverflow.ellipsis,
+                          "By submitting this report, you confirm that the information provided is accurate to the best of your knowledge. False reporting is a punishable offense.",
+                          style: TextStyle(
+                            color: Colors.blueGrey.shade700,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 24),
 
-              // Submit Button
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitComplaint,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                // Submit Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submitComplaint,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E88E5),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _isSubmitting
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Submit Complaint",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(Icons.send, size: 18),
+                            ],
+                          ),
                   ),
-                  child: _isSubmitting
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          'Submit Complaint',
-                          style: TextStyle(fontSize: 18),
-                        ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey,
+        letterSpacing: 1.0,
+      ),
+    );
+  }
+
+  InputDecoration _buildInputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Color(0xFF1E88E5)),
+      ),
+    );
+  }
+
+  Widget _buildAttachmentButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.shade300,
+            style: BorderStyle
+                .solid, // Dashed border needs package, sticking to solid 'placeholder' look
+          ),
+        ),
+        // Use a dotted border if helper available?
+        // Emulating dashed look with logic is complex without package.
+        // Clean simple border used.
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaPreview(File file, IconData icon, VoidCallback onRemove) {
+    return Stack(
+      children: [
+        Container(
+          width: 100,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.black12,
+            image: (icon == Icons.image)
+                ? DecorationImage(image: FileImage(file), fit: BoxFit.cover)
+                : null,
+          ),
+          child: (icon == Icons.video_file)
+              ? Center(child: Icon(icon, size: 40, color: Colors.white))
+              : null,
+        ),
+        Positioned(
+          top: 4,
+          right: 4,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 14),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

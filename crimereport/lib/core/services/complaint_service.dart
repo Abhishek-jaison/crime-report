@@ -62,6 +62,28 @@ class ComplaintService {
     }
   }
 
+  Future<List<dynamic>> getMyComplaints(String userEmail) async {
+    final url = Uri.parse(
+      '$baseUrl/complaints/my-complaints?user_email=$userEmail',
+    );
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print("Error fetching complaints: $e");
+      return [];
+    }
+  }
+
   Map<String, dynamic> _handleResponse(http.Response response) {
     try {
       final data = jsonDecode(response.body);

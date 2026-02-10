@@ -49,9 +49,13 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
         ).showSnackBar(const SnackBar(content: Text('Login Successful!')));
 
-        // Save email locally
+        // Save email and name locally
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_email', email);
+        final data = result['data'];
+        await prefs.setString('user_email', data['email'] ?? email);
+        if (data['name'] != null) {
+          await prefs.setString('user_name', data['name']);
+        }
 
         // Navigate to Home Screen
         Navigator.of(context).pushReplacement(

@@ -5,6 +5,7 @@ class UserBase(BaseModel):
     email: EmailStr
 
 class UserCreate(UserBase):
+    name: str | None = None
     password: str
     aadhaar_number: str | None = None
 
@@ -34,6 +35,7 @@ class Complaint(BaseModel):
 
 class User(UserBase):
     id: int
+    name: str | None = None
     is_active: bool = True
 
     class Config:
