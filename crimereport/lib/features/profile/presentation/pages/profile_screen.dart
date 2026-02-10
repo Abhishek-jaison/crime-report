@@ -91,18 +91,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  _buildProfileCard(),
-                  const SizedBox(height: 24),
-                  _buildStatsRow(),
-                  const SizedBox(height: 30),
-                  _buildReportsListHeader(),
-                  const SizedBox(height: 16),
-                  _buildReportsList(),
-                ],
+          : RefreshIndicator(
+              onRefresh: _loadProfileData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    _buildProfileCard(),
+                    const SizedBox(height: 24),
+                    _buildStatsRow(),
+                    const SizedBox(height: 30),
+                    _buildReportsListHeader(),
+                    const SizedBox(height: 16),
+                    _buildReportsList(),
+                  ],
+                ),
               ),
             ),
     );
@@ -320,9 +324,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final complaint = _complaints[index];
         final title = complaint['title'] ?? 'No Title';
         final type = complaint['crime_type'] ?? 'General';
-        final date = complaint['created_at'] ?? DateTime.now().toString();
-        // Format date simply
-        final formattedDate = date.length > 10 ? date.substring(0, 10) : date;
+
+        // Use CURRENT DATE as requested
+        final now = DateTime.now();
+        final formattedDate =
+            "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
         final status = complaint['status'] ?? 'Pending';
 
         return Container(

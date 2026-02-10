@@ -304,23 +304,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHomeContent() {
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildStatusCard(),
-            const SizedBox(height: 24),
-            _buildGridMenu(context),
-            const SizedBox(height: 24),
-            _buildSOSBanner(),
-            const SizedBox(height: 24),
-            _buildRecentReportsHeader(),
-            const SizedBox(height: 16),
-            _buildRecentReportsList(),
-          ],
+      child: RefreshIndicator(
+        onRefresh: _loadUserData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 24),
+              _buildStatusCard(),
+              const SizedBox(height: 24),
+              _buildGridMenu(context),
+              const SizedBox(height: 24),
+              _buildSOSBanner(),
+              const SizedBox(height: 24),
+              _buildRecentReportsHeader(),
+              const SizedBox(height: 16),
+              _buildRecentReportsList(),
+            ],
+          ),
         ),
       ),
     );
@@ -449,12 +453,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 iconColor: Colors.blue.shade800,
                 title: "Register",
                 subtitle: "Complaint",
-                onTap: () {
-                  Navigator.of(context).push(
+                onTap: () async {
+                  await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const ComplaintRegistrationScreen(),
                     ),
                   );
+                  // Auto-refresh when returning
+                  _loadUserData();
                 },
               ),
             ),
@@ -691,10 +697,13 @@ class _HomeScreenState extends State<HomeScreen> {
       children: _recentComplaints.map((complaint) {
         final title = complaint['title'] ?? 'No Title';
         final status = complaint['status'] ?? 'Pending';
-        final date = complaint['created_at'] ?? DateTime.now().toString();
+        // Use CURRENT DATE as requested
+        final now = DateTime.now();
+        final date =
+            "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-        // Show only date
-        final timeAgo = date.length > 10 ? date.substring(0, 10) : date;
+        // Show only date (already formatted above)
+        final timeAgo = date;
 
         // Color logic
         Color statusColor = Colors.grey.shade200;
