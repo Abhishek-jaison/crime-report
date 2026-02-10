@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 
 import 'package:crimereport/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:crimereport/features/complaint/presentation/pages/complaint_registration_screen.dart';
+import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
 import 'package:crimereport/core/services/police_station_service.dart';
 import 'package:crimereport/features/home/data/models/police_station_model.dart';
 
@@ -388,6 +389,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 15,
                   ),
                   textStyle: const TextStyle(fontSize: 18),
+                ),
+              ),
+              const SizedBox(height: 15),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CrimeHeatmapScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.map_outlined),
+                label: const Text("View Crime Map"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                  textStyle: const TextStyle(fontSize: 18),
+                  backgroundColor: Colors.blueGrey,
+                  foregroundColor: Colors.white,
                 ),
               ),
             ],
