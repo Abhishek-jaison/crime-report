@@ -230,15 +230,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
         .where((c) => c['status'] != 'Pending' && c['status'] != null)
         .length;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildStatItem("Reported", total.toString()),
-        Container(width: 1, height: 40, color: Colors.grey.shade300),
-        _buildStatItem("Reviewed", reviewed.toString()),
-        Container(width: 1, height: 40, color: Colors.grey.shade300),
-        _buildStatItem("Pending", pending.toString()),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 5,
+            blurRadius: 20,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _buildStatItem("Reported", total.toString()),
+          Container(width: 1, height: 40, color: Colors.grey.shade300),
+          _buildStatItem("Reviewed", reviewed.toString()),
+          Container(width: 1, height: 40, color: Colors.grey.shade300),
+          _buildStatItem("Pending", pending.toString()),
+        ],
+      ),
     );
   }
 

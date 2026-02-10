@@ -7,8 +7,8 @@ import 'package:crimereport/features/complaint/presentation/pages/complaint_regi
 import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
 import 'package:crimereport/core/services/police_station_service.dart';
 import 'package:crimereport/features/home/data/models/police_station_model.dart';
-
 import 'package:crimereport/features/profile/presentation/pages/profile_screen.dart';
+import 'package:crimereport/core/services/complaint_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +21,9 @@ class _HomeScreenState extends State<HomeScreen> {
   PoliceStation? _nearestStation;
   int _selectedIndex = 0;
   String? _userName;
+  final ComplaintService _complaintService = ComplaintService();
+  List<dynamic> _recentComplaints = [];
+  bool _isLoadingComplaints = true;
 
   @override
   void initState() {
@@ -34,6 +37,35 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _userName = prefs.getString('user_name');
     });
+    final email = prefs.getString('user_email');
+    if (email != null) {
+      _fetchRecentComplaints(email);
+    } else {
+      setState(() => _isLoadingComplaints = false);
+    }
+  }
+
+  Future<void> _fetchRecentComplaints(String email) async {
+    try {
+      final complaints = await _complaintService.getMyComplaints(email);
+      if (mounted) {
+        setState(() {
+          complaints.sort((a, b) {
+            final dateA = DateTime.parse(
+              a['created_at'] ?? DateTime.now().toString(),
+            );
+            final dateB = DateTime.parse(
+              b['created_at'] ?? DateTime.now().toString(),
+            );
+            return dateB.compareTo(dateA);
+          });
+          _recentComplaints = complaints.take(3).toList();
+          _isLoadingComplaints = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingComplaints = false);
+    }
   }
 
   Future<void> _sendSOSMessage() async {
@@ -112,31 +144,140 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showSOSOptions() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              "Emergency Action",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            Container(
+              width: 50,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.call, color: Colors.red),
-              title: const Text("Call 112"),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_rounded,
+                color: Colors.red.shade700,
+                size: 40,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Emergency Assistance",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              "Who do you want to contact?",
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 32),
+            _buildSOSButton(
+              title: "Call Police (112)",
+              subtitle: "Direct Emergency Line",
+              icon: Icons.call,
+              color: Colors.red,
               onTap: () {
                 Navigator.pop(context);
                 _makeEmergencyCall();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.message, color: Colors.orange),
-              title: const Text("Send Location via SMS"),
+            const SizedBox(height: 16),
+            _buildSOSButton(
+              title: "Send Location Details",
+              subtitle: "Share live coordinates via SMS",
+              icon: Icons.send,
+              color: Colors.orange,
               onTap: () {
                 Navigator.pop(context);
                 _sendSOSMessage();
               },
+            ),
+            const SizedBox(height: 32),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                "Cancel",
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSOSButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withOpacity(0.2), width: 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: const Color(0xFF1E1E1E),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: Colors.grey.shade400,
             ),
           ],
         ),
@@ -516,30 +657,69 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentReportsList() {
+    if (_isLoadingComplaints) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_recentComplaints.isEmpty) {
+      return Center(
+        child: Column(
+          children: [
+            Icon(Icons.folder_open, size: 40, color: Colors.grey.shade300),
+            const SizedBox(height: 8),
+            const Text(
+              "No recent activity",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
-      children: [
-        _buildReportItem(
-          title: "Theft Reported",
-          time: "2 hours ago • Campus North",
-          status: "PENDING",
-          statusColor: Colors.grey.shade200,
-          statusTextColor: Colors.grey.shade700,
-          icon: Icons.warning_amber_rounded,
-          iconBg: const Color(0xFFFFF9C4), // Yellow
-          iconColor: const Color(0xFFFBC02D),
-        ),
-        const SizedBox(height: 16),
-        _buildReportItem(
-          title: "Station Visit Scheduled",
-          time: "Yesterday • Precinct 04",
-          status: "CLOSED",
-          statusColor: Colors.green.shade50,
-          statusTextColor: Colors.green,
-          icon: Icons.check_circle_outline,
-          iconBg: Colors.green.shade50,
-          iconColor: Colors.green,
-        ),
-      ],
+      children: _recentComplaints.map((complaint) {
+        final title = complaint['title'] ?? 'No Title';
+        final status = complaint['status'] ?? 'Pending';
+        final date = complaint['created_at'] ?? DateTime.now().toString();
+
+        // Show only date
+        final timeAgo = date.length > 10 ? date.substring(0, 10) : date;
+
+        // Color logic
+        Color statusColor = Colors.grey.shade200;
+        Color statusTextColor = Colors.grey.shade700;
+        IconData icon = Icons.info_outline;
+        Color iconBg = Colors.grey.shade100;
+        Color iconColor = Colors.grey;
+
+        if (status == 'Pending') {
+          statusColor = const Color(0xFFFFF9C4); // Yellow Light
+          statusTextColor = const Color(0xFFFBC02D); // Yellow Dark
+          icon = Icons.warning_amber_rounded;
+          iconBg = const Color(0xFFFFF9C4);
+          iconColor = const Color(0xFFFBC02D);
+        } else if (status == 'Resolved') {
+          statusColor = Colors.green.shade50;
+          statusTextColor = Colors.green;
+          icon = Icons.check_circle_outline;
+          iconBg = Colors.green.shade50;
+          iconColor = Colors.green;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: _buildReportItem(
+            title: title,
+            time: timeAgo,
+            status: status.toUpperCase(),
+            statusColor: statusColor,
+            statusTextColor: statusTextColor,
+            icon: icon,
+            iconBg: iconBg,
+            iconColor: iconColor,
+          ),
+        );
+      }).toList(),
     );
   }
 
