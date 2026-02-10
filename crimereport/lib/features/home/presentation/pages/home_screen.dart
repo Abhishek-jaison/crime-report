@@ -3,11 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 
-import 'package:crimereport/features/auth/presentation/pages/welcome_screen.dart';
 import 'package:crimereport/features/complaint/presentation/pages/complaint_registration_screen.dart';
 import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
 import 'package:crimereport/core/services/police_station_service.dart';
 import 'package:crimereport/features/home/data/models/police_station_model.dart';
+import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,8 +18,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   PoliceStation? _nearestStation;
-  bool _isLoadingStation = false;
-  String _stationError = '';
+  // Navigation Index
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -29,268 +29,119 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear(); // Clear all data (or just isVerified)
+    await prefs.clear();
 
     if (context.mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const WelcomeScreen()),
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
       );
     }
   }
 
-  Future<void> _makeEmergencyCall(BuildContext context) async {
-    final Uri launchUri = Uri(scheme: 'tel', path: '112');
-    try {
-      if (await canLaunchUrl(launchUri)) {
-        await launchUrl(launchUri);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Could not launch dialer.")),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
+  Future<void> _sendSOSMessage() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Error: $e")));
-      }
+        ).showSnackBar(const SnackBar(content: Text("Location disabled")));
+      return;
     }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.deniedForever) return;
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    final String googleMapsUrl =
+        "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}";
+    final String message =
+        "SOS! I need help. My current location: $googleMapsUrl";
+    final Uri smsLaunchUri = Uri(
+      scheme: 'sms',
+      path: '112',
+      queryParameters: <String, String>{'body': message},
+    );
+    if (await canLaunchUrl(smsLaunchUri)) await launchUrl(smsLaunchUri);
+  }
+
+  Future<void> _makeEmergencyCall() async {
+    final Uri launchUri = Uri(scheme: 'tel', path: '112');
+    if (await canLaunchUrl(launchUri)) await launchUrl(launchUri);
   }
 
   Future<void> _fetchNearestPoliceStation() async {
-    setState(() {
-      _isLoadingStation = true;
-      _stationError = '';
-    });
-
     try {
-      // 1. Check permissions & Get Location
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        setState(() {
-          _isLoadingStation = false;
-          _stationError = 'Location services disabled';
-        });
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          setState(() {
-            _isLoadingStation = false;
-            _stationError = 'Location permission denied';
-          });
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        setState(() {
-          _isLoadingStation = false;
-          _stationError = 'Location permission permanently denied';
-        });
-        return;
-      }
-
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
       );
-
-      // 2. Fetch Stations
       final service = PoliceStationService();
       final stations = await service.fetchNearbyStations(
         position.latitude,
         position.longitude,
       );
-
       if (stations.isNotEmpty) {
-        // Service already calculating distance and we could sort
-        // Assuming service returns sorted or we just take the first one
-        // Let's sort to be sure
         stations.sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
-
-        if (mounted) {
-          setState(() {
-            _nearestStation = stations.first;
-            _isLoadingStation = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _isLoadingStation = false;
-            _stationError = 'No police stations found nearby';
-          });
-        }
+        if (mounted) setState(() => _nearestStation = stations.first);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingStation = false;
-          _stationError = 'Failed to load station: $e';
-        });
-      }
+      // Handle silently
     }
   }
 
-  void _openMap(double lat, double lng) async {
-    // 1. Try launching native map app (geo: scheme)
-    final geoUrl = Uri.parse("geo:$lat,$lng?q=$lat,$lng");
-    try {
-      if (await canLaunchUrl(geoUrl)) {
-        await launchUrl(geoUrl);
-        return;
-      }
-    } catch (_) {
-      // Ignore error and try next method
-    }
-
-    // 2. Fallback to Google Maps Web URL (https: scheme)
-    final googleMapsUrl = Uri.parse(
-      "https://www.google.com/maps/search/?api=1&query=$lat,$lng",
-    );
-    try {
-      if (await canLaunchUrl(googleMapsUrl)) {
-        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Could not open maps (no app found)")),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error opening map: $e")));
-      }
-    }
-  }
-
-  Future<void> _sendSOSMessage(BuildContext context) async {
-    // 1. Check permissions - Reuse logic or simplify since usually done in _fetchNearestPoliceStation
-    // But SOS is critical, so re-check
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Location services are disabled.")),
-        );
-      }
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Location permissions are denied")),
-          );
-        }
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Location permissions are permanently denied."),
-          ),
-        );
-      }
-      return;
-    }
-
-    // 2. Get Location
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Fetching location...")));
-    }
-
-    try {
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+  void _openMapToStation() {
+    if (_nearestStation != null) {
+      final geoUrl = Uri.parse(
+        "geo:${_nearestStation!.lat},${_nearestStation!.lng}?q=${_nearestStation!.lat},${_nearestStation!.lng}",
       );
-
-      // 3. Compose SMS
-      final String googleMapsUrl =
-          "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}";
-      final String message =
-          "SOS! I need help. My current location: $googleMapsUrl";
-
-      // 4. Send SMS Intent
-      final Uri smsLaunchUri = Uri(
-        scheme: 'sms',
-        path: '1234567890', // Placeholder emergency contact
-        queryParameters: <String, String>{'body': message},
+      launchUrl(geoUrl);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Finding nearest station...")),
       );
-
-      if (await canLaunchUrl(smsLaunchUri)) {
-        await launchUrl(smsLaunchUri);
-      } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Could not launch SMS app.")),
-          );
-        }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Error fetching location: $e")));
-      }
+      _fetchNearestPoliceStation().then((_) {
+        if (_nearestStation != null) _openMapToStation();
+      });
     }
   }
 
-  void _triggerSOS(BuildContext context) {
-    showDialog(
+  void _showSOSOptions() {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("URGENT: SOS ACITON"),
-        content: const Text("Choose an emergency action:"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text("CANCEL"),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _sendSOSMessage(context);
-            },
-            icon: const Icon(Icons.sms),
-            label: const Text("SEND LOCATION"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Emergency Action",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              _makeEmergencyCall(context);
-            },
-            icon: const Icon(Icons.call),
-            label: const Text("CALL 112"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+            const SizedBox(height: 20),
+            ListTile(
+              leading: const Icon(Icons.call, color: Colors.red),
+              title: const Text("Call 112"),
+              onTap: () {
+                Navigator.pop(context);
+                _makeEmergencyCall();
+              },
             ),
-          ),
-        ],
+            ListTile(
+              leading: const Icon(Icons.message, color: Colors.orange),
+              title: const Text("Send Location via SMS"),
+              onTap: () {
+                Navigator.pop(context);
+                _sendSOSMessage();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -298,149 +149,501 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Crime Reporting Home"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
+      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 24),
+              _buildStatusCard(),
+              const SizedBox(height: 24),
+              _buildGridMenu(context),
+              const SizedBox(height: 24),
+              _buildSOSBanner(),
+              const SizedBox(height: 24),
+              _buildRecentReportsHeader(),
+              const SizedBox(height: 16),
+              _buildRecentReportsList(),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Welcome back,",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              "John Doe", // Placeholder name
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E1E1E),
+              ),
+            ),
+          ],
+        ),
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0CBA8), // Placeholder avatar color
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 2),
+            image: const DecorationImage(
+              // Using a generic placeholder if no image
+              image: NetworkImage(
+                "https://i.pravatar.cc/150?img=11",
+              ), // Mock image
+              fit: BoxFit.cover,
+            ),
+          ),
+          child: Align(
+            alignment: Alignment.bottomRight,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.green,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE3F2FD), // Light blue
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFBBDEFB)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E88E5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.notifications_active,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "System Status: Active",
+                style: TextStyle(
+                  color: Color(0xFF1565C0),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "3 active patrols in your vicinity.",
+                style: TextStyle(color: Color(0xFF546E7A), fontSize: 13),
+              ),
+            ],
           ),
         ],
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                "Welcome to the Dashboard!",
-                style: TextStyle(fontSize: 24),
-              ),
-              const SizedBox(height: 30),
+    );
+  }
 
-              // Police Station Card
-              if (_isLoadingStation)
-                const CircularProgressIndicator()
-              else if (_stationError.isNotEmpty)
-                Text(
-                  "Station Error: $_stationError",
-                  style: const TextStyle(color: Colors.red),
-                )
-              else if (_nearestStation != null)
-                Card(
-                  elevation: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 20),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        const Text(
-                          "Nearest Police Station",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Divider(),
-                        Text(
-                          _nearestStation!.name,
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _nearestStation!.address,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Distance: ${_nearestStation!.distance?.toStringAsFixed(0)} meters",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () => _openMap(
-                            _nearestStation!.lat,
-                            _nearestStation!.lng,
-                          ),
-                          icon: const Icon(Icons.map),
-                          label: const Text("View on Map"),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              const SizedBox(height: 30),
-
-              ElevatedButton.icon(
-                onPressed: () {
+  Widget _buildGridMenu(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildGridItem(
+                context,
+                icon: Icons.assignment,
+                color: Colors.blue.shade100,
+                iconColor: Colors.blue.shade800,
+                title: "Register",
+                subtitle: "Complaint",
+                onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const ComplaintRegistrationScreen(),
                     ),
                   );
                 },
-                icon: const Icon(Icons.report_problem),
-                label: const Text("Register Complaint"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
-                  ),
-                  textStyle: const TextStyle(fontSize: 18),
-                ),
               ),
-              const SizedBox(height: 15),
-              ElevatedButton.icon(
-                onPressed: () {
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildGridItem(
+                context,
+                icon: Icons.map,
+                color: Colors.lightBlue.shade50,
+                iconColor: Colors.blue.shade800,
+                title: "Heat Map",
+                subtitle: "Crime Zones",
+                onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => const CrimeHeatmapScreen(),
                     ),
                   );
                 },
-                icon: const Icon(Icons.map_outlined),
-                label: const Text("View Crime Map"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
-                  ),
-                  textStyle: const TextStyle(fontSize: 18),
-                  backgroundColor: Colors.blueGrey,
-                  foregroundColor: Colors.white,
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildGridItem(
+                context,
+                icon: Icons.local_police, // Shield icon replacement
+                color: Colors.blue.shade50,
+                iconColor: Colors.blue.shade800,
+                title: "Police",
+                subtitle: "Station Finder",
+                onTap: _openMapToStation, // Use existing logic
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildGridItem(
+                context,
+                icon: Icons.menu_book,
+                color: Colors.blue.shade50,
+                iconColor: Colors.blue.shade800,
+                title: "Guidelines",
+                subtitle: "Legal Info",
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Guidelines Coming Soon")),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGridItem(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.05),
+              spreadRadius: 2,
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 28),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E1E1E),
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 20.0),
-        child: SizedBox(
-          width: 80,
-          height: 80,
-          child: FloatingActionButton(
-            onPressed: () => _triggerSOS(context),
-            backgroundColor: Colors.red,
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.sos, size: 30, color: Colors.white),
-                Text(
-                  "SOS",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+    );
+  }
+
+  Widget _buildSOSBanner() {
+    return GestureDetector(
+      onTap: _showSOSOptions,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.1),
+              spreadRadius: 5,
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+          border: Border.all(color: Colors.red.shade100, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEF9A9A), // Light red
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.location_on,
+                color: Colors.white,
+                size: 30,
+              ),
+            ),
+            const SizedBox(width: 20),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "SOS EMERGENCY",
+                    style: TextStyle(
+                      color: Color(0xFFD32F2F),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
+                  SizedBox(height: 4),
+                  Text(
+                    "Instant Help & Location Share",
+                    style: TextStyle(color: Colors.grey, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.grey.shade400,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentReportsHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          "Recent Reports",
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF1E1E1E),
+          ),
+        ),
+        TextButton(
+          onPressed: () {},
+          child: const Text(
+            "See All",
+            style: TextStyle(
+              color: Color(0xFF1E88E5),
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentReportsList() {
+    return Column(
+      children: [
+        _buildReportItem(
+          title: "Theft Reported",
+          time: "2 hours ago • Campus North",
+          status: "PENDING",
+          statusColor: Colors.grey.shade200,
+          statusTextColor: Colors.grey.shade700,
+          icon: Icons.warning_amber_rounded,
+          iconBg: const Color(0xFFFFF9C4), // Yellow
+          iconColor: const Color(0xFFFBC02D),
+        ),
+        const SizedBox(height: 16),
+        _buildReportItem(
+          title: "Station Visit Scheduled",
+          time: "Yesterday • Precinct 04",
+          status: "CLOSED",
+          statusColor: Colors.green.shade50,
+          statusTextColor: Colors.green,
+          icon: Icons.check_circle_outline,
+          iconBg: Colors.green.shade50,
+          iconColor: Colors.green,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReportItem({
+    required String title,
+    required String time,
+    required String status,
+    required Color statusColor,
+    required Color statusTextColor,
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Color(0xFF1E1E1E),
+                  ),
+                ),
+                Text(
+                  time,
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               ],
             ),
           ),
-        ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                color: statusTextColor,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return BottomNavigationBar(
+      currentIndex: _selectedIndex,
+      onTap: (index) {
+        setState(() => _selectedIndex = index);
+        if (index == 0) {
+          // Home
+        } else if (index == 3) {
+          // Profile -> Logout logic for now
+          _logout(context);
+        }
+      },
+      type: BottomNavigationBarType.fixed,
+      backgroundColor: Colors.white,
+      selectedItemColor: const Color(0xFF1E88E5),
+      unselectedItemColor: Colors.grey,
+      showSelectedLabels: true,
+      showUnselectedLabels: true,
+      elevation: 10,
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.notifications),
+          label: 'Alerts',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat_bubble),
+          label: 'Support',
+        ),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+      ],
     );
   }
 }

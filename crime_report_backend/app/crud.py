@@ -20,7 +20,7 @@ import random
 import datetime
 
 def create_otp(db: Session, email: str):
-    otp = str(random.randint(100000, 999999))
+    otp = str(random.randint(10000, 99999))
     # 5 minutes expiry
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
     
