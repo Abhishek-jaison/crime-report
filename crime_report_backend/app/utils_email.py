@@ -8,7 +8,7 @@ load_dotenv()
 
 # Configuration (Use Environment Variables in production!)
 SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+SMTP_PORT = 465
 SENDER_EMAIL = os.getenv("SENDER_EMAIL")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
@@ -38,8 +38,9 @@ def send_otp_email(receiver_email: str, otp: str):
         """
         msg.attach(MIMEText(body, 'html'))
 
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
+        # Use SMTP_SSL for port 465
+        server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+        # server.starttls() # Not needed for SSL
         server.login(SENDER_EMAIL, SENDER_PASSWORD)
         text = msg.as_string()
         server.sendmail(SENDER_EMAIL, receiver_email, text)

@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
+import '../../config/api_config.dart';
+
 class ComplaintService {
-  // Use 10.0.2.2 for Android Emulator to access localhost of the host machine.
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  static const String baseUrl = ApiConfig.baseUrl;
 
   Future<Map<String, dynamic>> submitComplaint({
     required String title,
