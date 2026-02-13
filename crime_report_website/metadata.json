@@ -1,0 +1,7 @@
+{
+  "name": "GuardianOS - Unified Public Safety Dashboard",
+  "description": "A world-class senior frontend implementation of a comprehensive crime reporting and public safety administration system, featuring real-time monitoring, SOS alerts, heat maps, and user management.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
