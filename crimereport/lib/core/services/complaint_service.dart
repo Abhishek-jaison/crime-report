@@ -81,7 +81,12 @@ class ComplaintService {
         headers: {'Content-Type': 'application/json'},
       );
 
-      return _handleResponse(response, isList: true)['data'];
+      final result = _handleResponse(response, isList: true);
+      if (result['success'] == true && result['data'] != null) {
+        return result['data'];
+      } else {
+        return [];
+      }
     } catch (e) {
       print("Error fetching complaints: $e");
       return [];

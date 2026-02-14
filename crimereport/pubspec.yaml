@@ -41,6 +41,7 @@ dependencies:
   http: ^1.6.0
   latlong2: ^0.9.1
   flutter_map_heatmap: ^0.0.8
+  floating_frosted_bottom_bar: ^0.0.1
 
 dev_dependencies:
   flutter_test:

@@ -39,16 +39,14 @@ def create_complaint(
     video: UploadFile = File(None),
     db: Session = Depends(database.get_db)
 ):
-    # Check if user exists
-    print(f"DEBUG: Received user_email='{user_email}'")
+    # Robust lookup using CRUD
+    user = crud.get_user_by_email(db, email=user_email)
     
-    # Debug: List all users
-    all_users = db.query(models.User).all()
-    print(f"DEBUG: All users in DB: {[u.email for u in all_users]}")
-
-    user = db.query(models.User).filter(models.User.email == user_email).first()
     if not user:
-        print(f"DEBUG: User not found for email: {user_email}")
+        print(f"DEBUG: User not found for email: '{user_email}'")
+        # Print all emails to help debug
+        all_emails = [u.email for u in db.query(models.User).all()]
+        print(f"DEBUG: Available emails: {all_emails}")
         raise HTTPException(status_code=404, detail=f"User not found for {user_email}")
 
     image_path = None
@@ -79,7 +77,8 @@ def create_complaint(
 @router.get("/my-complaints", response_model=list[schemas.Complaint])
 def get_my_complaints(user_email: str, db: Session = Depends(database.get_db)):
     # Verify user exists
-    user = db.query(models.User).filter(models.User.email == user_email).first()
+    # Verify user exists (Robust)
+    user = crud.get_user_by_email(db, email=user_email)
     if not user:
          raise HTTPException(status_code=404, detail="User not found")
          

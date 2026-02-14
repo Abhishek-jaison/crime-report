@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:floating_frosted_bottom_bar/floating_frosted_bottom_bar.dart';
 
 import 'package:crimereport/features/complaint/presentation/pages/complaint_registration_screen.dart';
 import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
@@ -289,16 +290,97 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA), // Light grey background
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          _buildHomeContent(),
-          const Center(child: Text("Alerts Screen")),
-          const Center(child: Text("Support Screen")),
-          const ProfileScreen(),
-        ],
+      body: FrostedBottomBar(
+        opacity: 0.6, // Slightly more transparent to let blur show through
+        sigmaX: 20, // Increased blur for "frosted" look
+        sigmaY: 20,
+        borderRadius: BorderRadius.circular(500),
+        duration: const Duration(milliseconds: 500),
+        hideOnScroll: false,
+        bottom: 20 + MediaQuery.of(context).padding.bottom,
+        width: MediaQuery.of(context).size.width * 0.85,
+        bottomBarColor: Colors.transparent, // We handle colors in the child
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(500),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 1.5,
+            ), // Glass edge
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.4), // Light reflection
+                Colors.white.withOpacity(0.1),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              _buildNavItem(
+                0,
+                Icons.home_rounded,
+                Icons.home_outlined,
+                isLeft: true,
+              ),
+              _buildNavItem(
+                1,
+                Icons.person_rounded,
+                Icons.person_outline_rounded,
+                isLeft: false,
+              ),
+            ],
+          ),
+        ),
+        body: (context, controller) {
+          return IndexedStack(
+            index: _selectedIndex,
+            children: [_buildHomeContent(), const ProfileScreen()],
+          );
+        },
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  Widget _buildNavItem(
+    int index,
+    IconData activeIcon,
+    IconData inactiveIcon, {
+    required bool isLeft,
+  }) {
+    final isSelected = _selectedIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            // Primary color for selected, transparent for unselected (showing crystal bg)
+            color: isSelected
+                ? const Color(0xFF1E88E5).withOpacity(0.9)
+                : Colors.transparent,
+            borderRadius: BorderRadius.horizontal(
+              left: isLeft ? const Radius.circular(500) : Radius.zero,
+              right: !isLeft ? const Radius.circular(500) : Radius.zero,
+            ),
+          ),
+          child: Icon(
+            isSelected ? activeIcon : inactiveIcon,
+            // White for selected, dark grey for unselected to contrast with glass
+            color: isSelected ? Colors.white : Colors.black54,
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 
@@ -308,7 +390,12 @@ class _HomeScreenState extends State<HomeScreen> {
         onRefresh: _loadUserData,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20.0),
+          padding: const EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            100,
+          ), // Extra bottom padding for nav bar
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -359,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
         GestureDetector(
           onTap: () {
             // Switch to Profile Tab instead of pushing
-            setState(() => _selectedIndex = 3);
+            setState(() => _selectedIndex = 1);
           },
           child: Container(
             width: 50,
@@ -813,69 +900,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, -1),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: (index) {
-            setState(() => _selectedIndex = index);
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: const Color(0xFF1E88E5),
-          unselectedItemColor: Colors.grey.shade400,
-          showSelectedLabels: true,
-          showUnselectedLabels: true,
-          elevation: 0,
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_outlined),
-              activeIcon: Icon(Icons.notifications_rounded),
-              label: 'Alerts',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded),
-              activeIcon: Icon(Icons.chat_bubble_rounded),
-              label: 'Support',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded),
-              activeIcon: Icon(Icons.person_rounded),
-              label: 'Profile',
-            ),
-          ],
-        ),
       ),
     );
   }

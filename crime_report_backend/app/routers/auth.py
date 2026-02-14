@@ -55,8 +55,10 @@ def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
+    print(f"DEBUG: Login attempt for email: '{user.email}'")
     db_user = crud.get_user_by_email(db, email=user.email)
     if not db_user:
+        print(f"DEBUG: Login failed - User not found for email: '{user.email}'")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
     if not utils.verify_password(user.password, db_user.hashed_password):

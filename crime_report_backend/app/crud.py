@@ -2,7 +2,15 @@ from sqlalchemy.orm import Session
 from . import models, schemas, utils
 
 def get_user_by_email(db: Session, email: str):
-    return db.query(models.User).filter(models.User.email == email).first()
+    email = email.strip()
+    # Try exact match
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user:
+        return user
+        
+    # Try case-insensitive
+    from sqlalchemy import func
+    return db.query(models.User).filter(func.lower(models.User.email) == email.lower()).first()
 
 def create_user(db: Session, user: schemas.UserCreate):
     hashed_password = utils.get_password_hash(user.password)
