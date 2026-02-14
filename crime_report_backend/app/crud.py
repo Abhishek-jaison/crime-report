@@ -23,8 +23,11 @@ def get_user_complaints(db: Session, user_email: str):
 import random
 import datetime
 
-def create_otp(db: Session, email: str):
-    otp = str(random.randint(10000, 99999))
+def create_otp(db: Session, email: str, fixed_otp: str = None):
+    if fixed_otp:
+        otp = fixed_otp
+    else:
+        otp = str(random.randint(10000, 99999))
     # 5 minutes expiry
     expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
     

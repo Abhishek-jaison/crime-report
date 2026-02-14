@@ -24,11 +24,14 @@ def send_otp(request: schemas.OTPRequest, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
         
-    otp = crud.create_otp(db=db, email=request.email)
-    if send_otp_email(request.email, otp):
-        return {"message": "OTP sent successfully"}
-    else:
-        raise HTTPException(status_code=500, detail="Failed to send email")
+    otp = crud.create_otp(db=db, email=request.email, fixed_otp="00000")
+    
+    # BYPASS EMAIL SENDING for Render reliability
+    # if send_otp_email(request.email, otp):
+    #     return {"message": "OTP sent successfully"}
+    # else:
+    #     raise HTTPException(status_code=500, detail="Failed to send email")
+    return {"message": "OTP sent successfully (Bypassed: 00000)"}
 
 @router.post("/verify-otp")
 def verify_otp(request: schemas.OTPVerify, db: Session = Depends(get_db)):

@@ -153,14 +153,17 @@ class _SignupScreenState extends State<SignupScreen> {
       char = _otpController.text[index];
     }
 
+    bool isFocused = index == _otpController.text.length;
+
     return Container(
       width: 50,
       height: 60,
       decoration: BoxDecoration(
         border: Border.all(
-          color: char.isNotEmpty
+          color: char.isNotEmpty || isFocused
               ? const Color(0xFF1E88E5)
               : Colors.grey.shade300,
+          width: isFocused ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12),
         color: Colors.white,
