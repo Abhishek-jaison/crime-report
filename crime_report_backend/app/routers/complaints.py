@@ -10,24 +10,7 @@ router = APIRouter(
     tags=["Complaints"],
 )
 
-UPLOAD_DIR = "uploads"
-IMAGE_DIR = os.path.join(UPLOAD_DIR, "images")
-VIDEO_DIR = os.path.join(UPLOAD_DIR, "videos")
 
-# Ensure directories exist
-os.makedirs(IMAGE_DIR, exist_ok=True)
-os.makedirs(VIDEO_DIR, exist_ok=True)
-
-def save_file(file: UploadFile, directory: str) -> str:
-    # Generate unique filename
-    file_extension = os.path.splitext(file.filename)[1]
-    unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join(directory, unique_filename)
-    
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-        
-    return file_path
 
 @router.post("/", response_model=schemas.Complaint)
 def create_complaint(
@@ -52,11 +35,17 @@ def create_complaint(
     image_path = None
     video_path = None
 
+    from ..utils_cloudinary import upload_to_cloudinary
+
     if image:
-        image_path = save_file(image, IMAGE_DIR)
+        print(f"DEBUG: Uploading image to Cloudinary...")
+        image_path = upload_to_cloudinary(image, resource_type="image")
+        print(f"DEBUG: Image uploaded: {image_path}")
     
     if video:
-        video_path = save_file(video, VIDEO_DIR)
+        print(f"DEBUG: Uploading video to Cloudinary...")
+        video_path = upload_to_cloudinary(video, resource_type="video")
+        print(f"DEBUG: Video uploaded: {video_path}")
 
     new_complaint = models.Complaint(
         title=title,
