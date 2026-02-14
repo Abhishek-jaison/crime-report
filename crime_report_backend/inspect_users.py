@@ -31,3 +31,4 @@ else:
         conn.close()
     except Exception as e:
         print(f"❌ Error reading database: {e}")
+#this is a test line
