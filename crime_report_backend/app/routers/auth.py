@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from .. import schemas, crud, utils, database
+from .. import schemas, crud, utils, database, models
 from ..utils_email import send_otp_email
 from ..database import SessionLocal
 
