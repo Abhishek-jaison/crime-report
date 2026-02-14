@@ -36,8 +36,8 @@ def create_otp(db: Session, email: str, fixed_otp: str = None):
         otp = fixed_otp
     else:
         otp = str(random.randint(10000, 99999))
-    # 5 minutes expiry
-    expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=5)
+    # 5 minutes expiry (Timezone Aware)
+    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=5)
     
     db_otp = db.query(models.OTP).filter(models.OTP.email == email).first()
     if db_otp:
@@ -60,7 +60,16 @@ def verify_otp(db: Session, email: str, otp: str):
     if db_otp.otp != otp:
         return False
         
-    if db_otp.expires_at < datetime.datetime.utcnow():
+    # Ensure comparison is timezone-aware
+    now = datetime.datetime.now(datetime.timezone.utc)
+    
+    # Handle case where DB might return naive time (SQLite) vs Aware (Postgres)
+    expires_at = db_otp.expires_at
+    if expires_at.tzinfo is None:
+        # If DB time is naive, assume it is UTC and make it aware
+        expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+        
+    if expires_at < now:
         return False
         
     db_otp.is_verified = True
