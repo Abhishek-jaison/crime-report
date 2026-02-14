@@ -40,9 +40,16 @@ def create_complaint(
     db: Session = Depends(database.get_db)
 ):
     # Check if user exists
+    print(f"DEBUG: Received user_email='{user_email}'")
+    
+    # Debug: List all users
+    all_users = db.query(models.User).all()
+    print(f"DEBUG: All users in DB: {[u.email for u in all_users]}")
+
     user = db.query(models.User).filter(models.User.email == user_email).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        print(f"DEBUG: User not found for email: {user_email}")
+        raise HTTPException(status_code=404, detail=f"User not found for {user_email}")
 
     image_path = None
     video_path = None

@@ -18,6 +18,11 @@ class ComplaintService {
   }) async {
     final url = Uri.parse('$baseUrl/complaints/');
 
+    print('API Request: POST $url');
+    print(
+      'API Body (Multipart Fields): {title: $title, description: $description, crime_type: $crimeType, user_email: $userEmail}',
+    );
+
     try {
       var request = http.MultipartRequest('POST', url);
 
@@ -68,37 +73,42 @@ class ComplaintService {
       '$baseUrl/complaints/my-complaints?user_email=$userEmail',
     );
 
+    print('API Request: GET $url');
+
     try {
       final response = await http.get(
         url,
         headers: {'Content-Type': 'application/json'},
       );
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        return [];
-      }
+      return _handleResponse(response, isList: true)['data'];
     } catch (e) {
       print("Error fetching complaints: $e");
       return [];
     }
   }
 
-  Map<String, dynamic> _handleResponse(http.Response response) {
+  Map<String, dynamic> _handleResponse(
+    http.Response response, {
+    bool isList = false,
+  }) {
+    print('API Response Status: ${response.statusCode}');
+    print('API Response Body: ${response.body}');
+
     try {
       final data = jsonDecode(response.body);
 
       if (response.statusCode >= 200 && response.statusCode < 300) {
-        return {
-          'success': true,
-          'message': 'Complaint submitted successfully',
-          'data': data,
-        };
+        if (isList) {
+          return {'success': true, 'data': data};
+        }
+        return {'success': true, 'message': 'Action successful', 'data': data};
       } else {
         return {
           'success': false,
-          'message': data['detail'] ?? 'An error occurred',
+          'message': (data is Map && data['detail'] != null)
+              ? data['detail']
+              : 'An error occurred',
         };
       }
     } catch (e) {
