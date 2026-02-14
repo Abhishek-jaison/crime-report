@@ -70,3 +70,8 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
         "name": db_user.name,
         "email": db_user.email
     }
+
+@router.get("/users", response_model=list[str])
+def get_all_user_emails(db: Session = Depends(get_db)):
+    users = db.query(models.User).all()
+    return [user.email for user in users]
