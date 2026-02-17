@@ -40,3 +40,18 @@ class User(UserBase):
 
     class Config:
         orm_mode = True
+
+class SOSAlertBase(BaseModel):
+    user_email: EmailStr | None = None
+    lat: str
+    long: str
+
+class SOSAlertCreate(SOSAlertBase):
+    pass
+
+class SOSAlert(SOSAlertBase):
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True

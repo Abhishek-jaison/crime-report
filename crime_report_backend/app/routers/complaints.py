@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from .. import schemas, models, database, crud
+from sqlalchemy import func
+from datetime import datetime, timedelta, timezone
 import shutil
 import os
 import uuid
@@ -72,3 +74,28 @@ def get_my_complaints(user_email: str, db: Session = Depends(database.get_db)):
          raise HTTPException(status_code=404, detail="User not found")
          
     return crud.get_user_complaints(db=db, user_email=user_email)
+
+@router.get("/stats")
+def get_complaint_stats(db: Session = Depends(database.get_db)):
+    """
+    Get total complaints and today's complaints count.
+    """
+    # Use 24h window for "Today" stats (rolling window)
+    total_complaints = db.query(models.Complaint).count()
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+    
+    today_complaints = db.query(models.Complaint).filter(
+        models.Complaint.created_at >= cutoff
+    ).count()
+    
+    return {
+        "total_complaints": total_complaints,
+        "today_complaints": today_complaints
+    }
+
+@router.get("/recent", response_model=list[schemas.Complaint])
+def get_recent_complaints(limit: int = 5, db: Session = Depends(database.get_db)):
+    """
+    Get the most recent complaints.
+    """
+    return db.query(models.Complaint).order_by(models.Complaint.created_at.desc()).limit(limit).all()

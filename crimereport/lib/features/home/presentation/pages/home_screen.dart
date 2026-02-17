@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:floating_frosted_bottom_bar/floating_frosted_bottom_bar.dart';
 
+import 'package:crimereport/core/services/sos_service.dart';
 import 'package:crimereport/features/complaint/presentation/pages/complaint_registration_screen.dart';
 import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
 import 'package:crimereport/core/services/police_station_service.dart';
@@ -23,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   String? _userName;
   final ComplaintService _complaintService = ComplaintService();
+  final SOSService _sosService = SOSService();
   List<dynamic> _recentComplaints = [];
   bool _isLoadingComplaints = true;
 
@@ -90,21 +92,33 @@ class _HomeScreenState extends State<HomeScreen> {
     Position position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
-    final String googleMapsUrl =
-        "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}";
-    final String message =
-        "SOS! I need help. My current location: $googleMapsUrl";
-    final Uri smsLaunchUri = Uri(
-      scheme: 'sms',
-      path: '112',
-      queryParameters: <String, String>{'body': message},
-    );
-    if (await canLaunchUrl(smsLaunchUri)) await launchUrl(smsLaunchUri);
-  }
 
-  Future<void> _makeEmergencyCall() async {
-    final Uri launchUri = Uri(scheme: 'tel', path: '112');
-    if (await canLaunchUrl(launchUri)) await launchUrl(launchUri);
+    // TRIGGER SOS API
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('user_email');
+
+    _sosService
+        .sendSOSAlert(
+          lat: position.latitude.toString(),
+          long: position.longitude.toString(),
+          userEmail: email,
+        )
+        .then((result) {
+          if (mounted) {
+            if (result['success']) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("SOS Alert Sent to Server!"),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            } else {
+              // Silently fail or minimal error to avoid panic?
+              // Maybe just log it.
+              print("Failed to send SOS: ${result['message']}");
+            }
+          }
+        });
   }
 
   Future<void> _fetchNearestPoliceStation() async {
@@ -140,150 +154,6 @@ class _HomeScreenState extends State<HomeScreen> {
         if (_nearestStation != null) _openMapToStation();
       });
     }
-  }
-
-  void _showSOSOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 50,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.warning_rounded,
-                color: Colors.red.shade700,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              "Emergency Assistance",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Who do you want to contact?",
-              style: TextStyle(color: Colors.grey, fontSize: 14),
-            ),
-            const SizedBox(height: 32),
-            _buildSOSButton(
-              title: "Call Police (112)",
-              subtitle: "Direct Emergency Line",
-              icon: Icons.call,
-              color: Colors.red,
-              onTap: () {
-                Navigator.pop(context);
-                _makeEmergencyCall();
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildSOSButton(
-              title: "Send Location Details",
-              subtitle: "Share live coordinates via SMS",
-              icon: Icons.send,
-              color: Colors.orange,
-              onTap: () {
-                Navigator.pop(context);
-                _sendSOSMessage();
-              },
-            ),
-            const SizedBox(height: 32),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                "Cancel",
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSOSButton({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withOpacity(0.2), width: 1),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: const Color(0xFF1E1E1E),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey.shade400,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -669,69 +539,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSOSBanner() {
-    return GestureDetector(
-      onTap: _showSOSOptions,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withOpacity(0.1),
-              spreadRadius: 5,
-              blurRadius: 15,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: Border.all(color: Colors.red.shade100, width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEF9A9A), // Light red
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.location_on,
-                color: Colors.white,
-                size: 30,
-              ),
-            ),
-            const SizedBox(width: 20),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "SOS EMERGENCY",
-                    style: TextStyle(
-                      color: Color(0xFFD32F2F),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    "Instant Help & Location Share",
-                    style: TextStyle(color: Colors.grey, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.grey.shade400,
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
+    return SwipeableSOSButton(onTrigger: _sendSOSMessage);
   }
 
   Widget _buildRecentReportsHeader() {
@@ -901,6 +709,136 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class SwipeableSOSButton extends StatefulWidget {
+  final Future<void> Function() onTrigger;
+
+  const SwipeableSOSButton({super.key, required this.onTrigger});
+
+  @override
+  State<SwipeableSOSButton> createState() => _SwipeableSOSButtonState();
+}
+
+class _SwipeableSOSButtonState extends State<SwipeableSOSButton> {
+  double _dragValue = 0.0;
+  bool _isSent = false;
+  final double _threshold = 0.7;
+
+  void _onHorizontalDragUpdate(DragUpdateDetails details, double sliderWidth) {
+    if (_isSent) return;
+    setState(() {
+      _dragValue += details.primaryDelta! / sliderWidth;
+      _dragValue = _dragValue.clamp(0.0, 1.0);
+    });
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
+    if (_isSent) return;
+    if (_dragValue > _threshold) {
+      _triggerSOS();
+    } else {
+      setState(() {
+        _dragValue = 0.0;
+      });
+    }
+  }
+
+  Future<void> _triggerSOS() async {
+    setState(() {
+      _dragValue = 1.0;
+      _isSent = true;
+    });
+
+    await widget.onTrigger();
+
+    // 10s Timer to reset
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          _isSent = false;
+          _dragValue = 0.0;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final knobSize = 60.0;
+        final padding = 4.0;
+        final sliderWidth = width - knobSize - (padding * 2);
+
+        return Container(
+          height: knobSize + (padding * 2),
+          decoration: BoxDecoration(
+            color: _isSent ? Colors.green.shade600 : Colors.red.shade600,
+            borderRadius: BorderRadius.circular(100),
+            boxShadow: [
+              BoxShadow(
+                color: (_isSent ? Colors.green : Colors.red).withOpacity(0.3),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Stack(
+            alignment: Alignment.centerLeft,
+            children: [
+              // Background Text
+              Center(
+                child: Text(
+                  _isSent ? "SOS SENT!" : "SWIPE FOR HELP  >>>",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+              // Slider Knob
+              Positioned(
+                left: padding + (_dragValue * sliderWidth),
+                child: GestureDetector(
+                  onHorizontalDragUpdate: (details) =>
+                      _onHorizontalDragUpdate(details, sliderWidth),
+                  onHorizontalDragEnd: _onHorizontalDragEnd,
+                  child: Container(
+                    width: knobSize,
+                    height: knobSize,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 5,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      _isSent ? Icons.check_rounded : Icons.sos_rounded,
+                      color: _isSent
+                          ? Colors.green.shade600
+                          : Colors.red.shade600,
+                      size: 32,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

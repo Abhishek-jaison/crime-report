@@ -4,7 +4,7 @@ import os
 
 from . import models
 from .database import engine
-from .routers import auth, complaints, debug
+from .routers import auth, complaints, debug, sos
 
 # --------------------------------------------------
 # CREATE FASTAPI APP
@@ -22,6 +22,19 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=UPLOAD_DIR), name="static")
 
 # --------------------------------------------------
+# CORS CONFIGURATION
+# --------------------------------------------------
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for dev (React/Flutter)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --------------------------------------------------
 # DATABASE INITIALIZATION
 # --------------------------------------------------
 from sqlalchemy import inspect
@@ -35,10 +48,11 @@ print(f"🔍 Existing tables: {existing_tables}")
 
 if not existing_tables:
     print("⚠️  No tables found. Creating schema...")
-    models.Base.metadata.create_all(bind=engine)
-    print("✅ Schema created.")
-else:
-    print(f"✅ Tables already exist ({len(existing_tables)}). Skipping creation.")
+
+# Run create_all to ensure ANY missing tables (like sos_alerts) are created.
+# This checks existence before creating, so perfectly safe.
+models.Base.metadata.create_all(bind=engine)
+print("✅ Schema verification/update complete.")
 
 # --------------------------------------------------
 # ROUTERS
@@ -46,6 +60,7 @@ else:
 app.include_router(auth.router)
 app.include_router(complaints.router)
 app.include_router(debug.router)
+app.include_router(sos.router)
 
 # --------------------------------------------------
 # ROOT ENDPOINT
