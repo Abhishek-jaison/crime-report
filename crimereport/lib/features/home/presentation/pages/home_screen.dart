@@ -770,21 +770,35 @@ class _SwipeableSOSButtonState extends State<SwipeableSOSButton> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
-        final knobSize = 60.0;
+        final knobSize = 65.0; // Slightly larger knob
         final padding = 4.0;
         final sliderWidth = width - knobSize - (padding * 2);
 
         return Container(
           height: knobSize + (padding * 2),
           decoration: BoxDecoration(
-            color: _isSent ? Colors.green.shade600 : Colors.red.shade600,
+            gradient: LinearGradient(
+              colors: _isSent
+                  ? [Colors.green.shade600, Colors.green.shade800]
+                  : [
+                      Color(0xFFFF5252), // Bright Red
+                      Color(0xFFD32F2F), // Darker Red
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(100),
             boxShadow: [
               BoxShadow(
-                color: (_isSent ? Colors.green : Colors.red).withOpacity(0.3),
-                blurRadius: 15,
+                color: (_isSent ? Colors.green : Colors.red).withOpacity(0.4),
+                blurRadius: 20,
                 spreadRadius: 2,
-                offset: const Offset(0, 5),
+                offset: const Offset(0, 8), // Deeper shadow
+              ),
+              BoxShadow(
+                color: Colors.white.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(-5, -5), // Highlight
               ),
             ],
           ),
@@ -793,16 +807,61 @@ class _SwipeableSOSButtonState extends State<SwipeableSOSButton> {
             children: [
               // Background Text
               Center(
-                child: Text(
-                  _isSent ? "SOS SENT!" : "SWIPE FOR HELP  >>>",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
+                child: Opacity(
+                  opacity: (1.0 - _dragValue).clamp(0.0, 1.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(width: knobSize / 2),
+                      Text(
+                        _isSent ? "SOS SENT!" : "SLIDE FOR SOS",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 2.0,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black26,
+                              blurRadius: 2,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (!_isSent)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8.0),
+                          child: Icon(
+                            Icons.keyboard_double_arrow_right,
+                            color: Colors.white70,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
+              // Success Text (Visible when sent)
+              if (_isSent)
+                Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white, size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        "HELP IS ON THE WAY",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Slider Knob
               Positioned(
                 left: padding + (_dragValue * sliderWidth),
@@ -818,19 +877,20 @@ class _SwipeableSOSButtonState extends State<SwipeableSOSButton> {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 5,
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 8,
                           spreadRadius: 1,
+                          offset: const Offset(0, 3),
                         ),
                       ],
                     ),
                     alignment: Alignment.center,
                     child: Icon(
-                      _isSent ? Icons.check_rounded : Icons.sos_rounded,
+                      _isSent ? Icons.done : Icons.sos_rounded,
                       color: _isSent
-                          ? Colors.green.shade600
-                          : Colors.red.shade600,
-                      size: 32,
+                          ? Colors.green.shade700
+                          : const Color(0xFFD32F2F),
+                      size: 34,
                     ),
                   ),
                 ),

@@ -40,6 +40,7 @@ class SOSAlert(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_email = Column(String, nullable=True)
-    lat = Column(String) # Storing as String for flexibility or Float
-    long = Column(String) 
+    lat = Column(String)
+    long = Column(String)
+    status = Column(String, default="Pending", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

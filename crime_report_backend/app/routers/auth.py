@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from .. import schemas, crud, utils, database, models
 from ..utils_email import send_otp_email
 from ..database import SessionLocal
@@ -75,3 +76,27 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
 def get_all_user_emails(db: Session = Depends(get_db)):
     users = db.query(models.User).all()
     return [user.email for user in users]
+
+@router.get("/users/all", response_model=list[schemas.UserDetail])
+def get_all_users_detail(db: Session = Depends(get_db)):
+    """Return all registered users with their complaint counts."""
+    results = (
+        db.query(
+            models.User,
+            func.count(models.Complaint.id).label("complaint_count")
+        )
+        .outerjoin(models.Complaint, models.Complaint.user_email == models.User.email)
+        .group_by(models.User.id)
+        .order_by(models.User.id.desc())
+        .all()
+    )
+    output = []
+    for user, count in results:
+        output.append(schemas.UserDetail(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            created_at=user.created_at,
+            complaint_count=count,
+        ))
+    return output

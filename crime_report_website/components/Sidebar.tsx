@@ -13,7 +13,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
     { id: 'heatmap', icon: 'map', label: 'Heat Map' },
     { id: 'sos', icon: 'emergency', label: 'SOS Alerts', badge: true },
     { id: 'users', icon: 'people', label: 'Users' },
-    { id: 'settings', icon: 'settings', label: 'Settings' },
   ];
 
   return (

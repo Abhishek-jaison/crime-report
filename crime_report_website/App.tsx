@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import ReportsPage from './components/ReportsPage';
 import HeatMapPage from './components/HeatMapPage';
 import UsersPage from './components/UsersPage';
-import SettingsPage from './components/SettingsPage';
+import SOSPage from './components/SOSPage';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
@@ -21,8 +21,8 @@ const App: React.FC = () => {
         return <HeatMapPage />;
       case 'users':
         return <UsersPage />;
-      case 'settings':
-        return <SettingsPage />;
+      case 'sos':
+        return <SOSPage />;
       default:
         return <Dashboard />;
     }
@@ -35,7 +35,6 @@ const App: React.FC = () => {
       case 'heatmap': return 'Incident Heat Map';
       case 'sos': return 'SOS Alerts Monitoring';
       case 'users': return 'User Database';
-      case 'settings': return 'System Settings';
       default: return 'GuardianOS';
     }
   };

@@ -41,10 +41,21 @@ class User(UserBase):
     class Config:
         orm_mode = True
 
+class UserDetail(BaseModel):
+    id: int
+    name: str | None = None
+    email: str
+    created_at: datetime
+    complaint_count: int = 0
+
+    class Config:
+        from_attributes = True
+
 class SOSAlertBase(BaseModel):
     user_email: EmailStr | None = None
     lat: str
     long: str
+    status: str = "Pending"
 
 class SOSAlertCreate(SOSAlertBase):
     pass

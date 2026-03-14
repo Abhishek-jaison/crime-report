@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from .. import schemas, models, database, crud
 from sqlalchemy import func
@@ -99,3 +100,35 @@ def get_recent_complaints(limit: int = 5, db: Session = Depends(database.get_db)
     Get the most recent complaints.
     """
     return db.query(models.Complaint).order_by(models.Complaint.created_at.desc()).limit(limit).all()
+
+@router.get("/all", response_model=list[schemas.Complaint])
+def get_all_complaints(db: Session = Depends(database.get_db)):
+    """
+    Get all complaints (admin view), ordered newest first.
+    """
+    return db.query(models.Complaint).order_by(models.Complaint.created_at.desc()).all()
+
+ALLOWED_STATUSES = {"Pending", "Dispatched", "Resolved", "Terminated"}
+
+class StatusUpdate(BaseModel):
+    status: str
+
+@router.patch("/{complaint_id}/status", response_model=schemas.Complaint)
+def update_complaint_status(
+    complaint_id: int,
+    update: StatusUpdate,
+    db: Session = Depends(database.get_db)
+):
+    """Update the status of a complaint (admin action)."""
+    if update.status not in ALLOWED_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {', '.join(ALLOWED_STATUSES)}"
+        )
+    complaint = db.query(models.Complaint).filter(models.Complaint.id == complaint_id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    complaint.status = update.status
+    db.commit()
+    db.refresh(complaint)
+    return complaint

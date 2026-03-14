@@ -1,7 +1,9 @@
+import sqlite3
 
-import requests
-try:
-    response = requests.get('http://127.0.0.1:8000/debug/tables')
-    print(response.json())
-except Exception as e:
-    print(e)
+conn = sqlite3.connect('crime_report.db')
+cursor = conn.cursor()
+cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+print("Tables:", cursor.fetchall())
+cursor.execute("PRAGMA table_info(sos_alerts)")
+print("sos_alerts columns:", cursor.fetchall())
+conn.close()

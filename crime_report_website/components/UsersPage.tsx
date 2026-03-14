@@ -1,18 +1,103 @@
+import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../constants';
 
-import React, { useState } from 'react';
-import { MOCK_USERS, MOCK_REPORTS } from '../constants';
-import { User } from '../types';
+interface UserDetail {
+  id: number;
+  name: string | null;
+  email: string;
+  created_at: string;
+  complaint_count: number;
+}
+
+interface Complaint {
+  id: number;
+  title: string;
+  description: string;
+  crime_type: string;
+  user_email: string;
+  status: string;
+  created_at: string;
+}
+
+const formatDate = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric'
+    });
+  } catch {
+    return iso;
+  }
+};
+
+const formatRelative = (iso: string) => {
+  try {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins} min${mins !== 1 ? 's' : ''} ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} hr${hrs !== 1 ? 's' : ''} ago`;
+    return formatDate(iso);
+  } catch {
+    return iso;
+  }
+};
+
+const getInitials = (name: string | null, email: string) => {
+  if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  return email.slice(0, 2).toUpperCase();
+};
+
+const avatarColors = [
+  'bg-violet-500', 'bg-blue-500', 'bg-emerald-500',
+  'bg-amber-500', 'bg-pink-500', 'bg-indigo-500',
+];
 
 const UsersPage: React.FC = () => {
-  const [selectedUser, setSelectedUser] = useState<User | null>(MOCK_USERS[0]);
+  const [users, setUsers] = useState<UserDetail[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [loadingComplaints, setLoadingComplaints] = useState(false);
+
+  // Fetch all users on mount
+  useEffect(() => {
+    setLoadingUsers(true);
+    fetch(`${API_BASE_URL}/auth/users/all`)
+      .then(res => res.json())
+      .then((data: UserDetail[]) => {
+        setUsers(data);
+        if (data.length > 0) setSelectedUser(data[0]);
+      })
+      .catch(err => console.error('Failed to fetch users:', err))
+      .finally(() => setLoadingUsers(false));
+  }, []);
+
+  // Fetch complaints when selected user changes
+  useEffect(() => {
+    if (!selectedUser) return;
+    setLoadingComplaints(true);
+    fetch(`${API_BASE_URL}/complaints/my-complaints?user_email=${encodeURIComponent(selectedUser.email)}`)
+      .then(res => res.json())
+      .then((data: Complaint[]) => {
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        setComplaints(sorted);
+      })
+      .catch(err => console.error('Failed to fetch complaints:', err))
+      .finally(() => setLoadingComplaints(false));
+  }, [selectedUser]);
 
   return (
     <div className="p-8 flex gap-8 h-[calc(100vh-80px)] overflow-hidden animate-in fade-in slide-in-from-bottom duration-500">
+      {/* Left: Users Table */}
       <section className="flex-1 flex flex-col min-w-0">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Registered Users</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Monitor and manage access for 2,408 registered citizens</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {loadingUsers ? 'Loading...' : `${users.length} registered citizen${users.length !== 1 ? 's' : ''}`}
+            </p>
           </div>
           <div className="flex gap-2">
             <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800">
@@ -26,128 +111,153 @@ const UsersPage: React.FC = () => {
 
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex-1 flex flex-col shadow-sm">
           <div className="overflow-y-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
-                <tr>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Verification</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Complaints</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Join Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {MOCK_USERS.map((user) => (
-                  <tr 
-                    key={user.id} 
-                    onClick={() => setSelectedUser(user)}
-                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer ${
-                      selectedUser?.id === user.id ? 'bg-primary/5 border-l-4 border-l-primary' : ''
-                    }`}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-slate-200 dark:bg-slate-700 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 overflow-hidden">
-                          <img className="h-full w-full object-cover" src={user.avatar} alt={user.name} />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-slate-900 dark:text-white">{user.name}</div>
-                          <div className="text-xs text-slate-500">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.verification === 'Verified' ? 'bg-green-100 text-green-700' :
-                        user.verification === 'Pending' ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        {user.verification}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{user.complaints}</span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-500">{user.joinDate}</td>
+            {loadingUsers ? (
+              <div className="flex items-center justify-center py-24 text-slate-400">
+                <span className="material-icons animate-spin text-3xl mr-2">refresh</span>
+                <span>Loading users…</span>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+                <span className="material-icons text-4xl mb-2">group_off</span>
+                <p>No registered users found.</p>
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 dark:bg-slate-800/50 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-center">Complaints</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Joined</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {users.map((user, idx) => (
+                    <tr
+                      key={user.id}
+                      onClick={() => setSelectedUser(user)}
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors cursor-pointer ${
+                        selectedUser?.id === user.id ? 'bg-primary/5 border-l-4 border-l-primary' : ''
+                      }`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-10 w-10 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-white text-sm ${avatarColors[idx % avatarColors.length]}`}>
+                            {getInitials(user.name, user.email)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {user.name || '(No Name)'}
+                            </div>
+                            <div className="text-xs text-slate-500">{user.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{user.complaint_count}</span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-500">{formatDate(user.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
           <div className="mt-auto p-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
-            <span className="text-xs text-slate-500">Showing {MOCK_USERS.length} users</span>
-            <div className="flex gap-2">
-              <button className="p-2 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900"><span className="material-icons text-xs leading-none">chevron_left</span></button>
-              <button className="p-2 border border-slate-200 dark:border-slate-700 rounded bg-white dark:bg-slate-900"><span className="material-icons text-xs leading-none">chevron_right</span></button>
-            </div>
+            <span className="text-xs text-slate-500">
+              {loadingUsers ? '—' : `Showing ${users.length} users`}
+            </span>
           </div>
         </div>
       </section>
 
+      {/* Right: User Detail Panel */}
       {selectedUser && (
         <section className="w-[450px] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm animate-in slide-in-from-right duration-300">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 relative">
-            <button className="absolute right-4 top-4 text-slate-400 hover:text-slate-600">
-              <span className="material-icons text-xl">more_vert</span>
-            </button>
             <div className="flex flex-col items-center text-center">
               <div className="relative mb-4">
-                <img className="w-24 h-24 rounded-2xl object-cover ring-4 ring-primary/10" src={selectedUser.avatar} alt={selectedUser.name} />
-                <div className="absolute -bottom-2 -right-2 bg-green-500 border-4 border-white dark:border-slate-900 w-8 h-8 rounded-full flex items-center justify-center">
-                  <span className="material-icons text-white text-base">verified</span>
+                <div className={`w-24 h-24 rounded-2xl flex items-center justify-center font-bold text-white text-3xl ring-4 ring-primary/10 ${avatarColors[users.indexOf(selectedUser) % avatarColors.length]}`}>
+                  {getInitials(selectedUser.name, selectedUser.email)}
                 </div>
               </div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">{selectedUser.name}</h2>
-              <p className="text-slate-500 text-sm">Citizen ID: {selectedUser.id}</p>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                {selectedUser.name || '(No Name)'}
+              </h2>
+              <p className="text-slate-500 text-sm">{selectedUser.email}</p>
+              <p className="text-slate-400 text-xs mt-1">Citizen ID: #{selectedUser.id}</p>
               <div className="mt-4 flex gap-2">
                 <button className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">View Dossier</button>
                 <button className="px-4 py-2 bg-primary/10 text-primary text-sm font-semibold rounded-lg hover:bg-primary/20 transition-colors">Contact</button>
               </div>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-px bg-slate-100 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800">
+
+          <div className="grid grid-cols-2 gap-px bg-slate-100 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-800">
             <div className="bg-white dark:bg-slate-900 p-4 text-center">
-              <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total</div>
-              <div className="text-xl font-bold text-slate-900 dark:text-white">{selectedUser.complaints}</div>
+              <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Total Reports</div>
+              <div className="text-xl font-bold text-slate-900 dark:text-white">{selectedUser.complaint_count}</div>
             </div>
             <div className="bg-white dark:bg-slate-900 p-4 text-center">
-              <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Active</div>
-              <div className="text-xl font-bold text-primary">{selectedUser.activeCount}</div>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-4 text-center">
-              <div className="text-xs text-slate-500 uppercase font-semibold mb-1">SOS</div>
-              <div className="text-xl font-bold text-red-500">{selectedUser.sosCount}</div>
+              <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Joined</div>
+              <div className="text-base font-bold text-slate-700 dark:text-slate-300">{formatDate(selectedUser.created_at)}</div>
             </div>
           </div>
+
           <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-4 flex items-center justify-between">
               Report History
-              <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">Latest 5</span>
+              <span className="text-[10px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                Latest {Math.min(complaints.length, 5)} of {complaints.length}
+              </span>
             </h3>
-            <div className="space-y-4">
-              {MOCK_REPORTS.slice(0, 3).map((rep) => (
-                <div key={rep.id} className="p-3 border border-slate-100 dark:border-slate-800 rounded-lg hover:border-primary/30 transition-all group">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700">{rep.type}</span>
-                    <span className="text-[10px] text-slate-400">{rep.timestamp}</span>
+
+            {loadingComplaints ? (
+              <div className="flex items-center justify-center py-12 text-slate-400">
+                <span className="material-icons animate-spin mr-2">refresh</span>
+                Loading reports…
+              </div>
+            ) : complaints.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                <span className="material-icons text-3xl mb-2">inbox</span>
+                <p className="text-sm">No reports submitted yet.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {complaints.slice(0, 5).map((rep) => (
+                  <div key={rep.id} className="p-3 border border-slate-100 dark:border-slate-800 rounded-lg hover:border-primary/30 transition-all">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700">
+                        {rep.crime_type}
+                      </span>
+                      <span className="text-[10px] text-slate-400">{formatRelative(rep.created_at)}</span>
+                    </div>
+                    <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">{rep.title}</h4>
+                    <p className="text-xs text-slate-500 line-clamp-2">{rep.description}</p>
+                    <div className="mt-2 flex items-center justify-end">
+                      <span className={`flex items-center gap-1 text-[11px] font-medium ${
+                        rep.status === 'Resolved' ? 'text-green-600' :
+                        rep.status === 'Dispatched' ? 'text-blue-600' : 'text-amber-600'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          rep.status === 'Resolved' ? 'bg-green-500' :
+                          rep.status === 'Dispatched' ? 'bg-blue-500' : 'bg-amber-500'
+                        }`}></span>
+                        {rep.status}
+                      </span>
+                    </div>
                   </div>
-                  <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">{rep.title}</h4>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-[11px] text-slate-500">
-                      <span className="material-icons text-xs">location_on</span> {rep.location}
-                    </span>
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> {rep.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {complaints.length > 5 && (
+            <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+              <button className="w-full py-2.5 flex items-center justify-center gap-2 text-primary font-semibold text-sm hover:bg-primary/5 rounded-lg transition-colors">
+                See All {complaints.length} Reports <span className="material-icons text-sm">arrow_forward</span>
+              </button>
             </div>
-          </div>
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-            <button className="w-full py-2.5 flex items-center justify-center gap-2 text-primary font-semibold text-sm hover:bg-primary/5 rounded-lg transition-colors">
-              See All Reports <span className="material-icons text-sm">arrow_forward</span>
-            </button>
-          </div>
+          )}
         </section>
       )}
     </div>
