@@ -95,16 +95,6 @@ const Dashboard: React.FC = () => {
           <p className="text-3xl font-bold text-slate-800 dark:text-white mt-1">{stats.todayReports}</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 hover:shadow-lg transition-all cursor-default">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-orange-500/10 dark:bg-orange-500/20 text-orange-500 rounded-xl flex items-center justify-center">
-              <span className="material-icons">priority_high</span>
-            </div>
-          </div>
-          <h3 className="text-slate-500 dark:text-slate-400 text-sm font-medium">High Priority</h3>
-          <p className="text-3xl font-bold text-slate-800 dark:text-white mt-1">--</p>
-        </div>
-
         <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border-2 border-red-500/20 dark:border-red-500/40 hover:shadow-lg transition-all relative overflow-hidden group cursor-default">
           <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-red-500/5 dark:bg-red-500/10 rounded-full group-hover:scale-150 transition-transform"></div>
           <div className="flex items-center justify-between mb-4">
