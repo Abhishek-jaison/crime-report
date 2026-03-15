@@ -56,43 +56,7 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> sendOtp(String email) async {
-    final url = Uri.parse('$baseUrl/auth/send-otp');
-    final body = jsonEncode({'email': email});
 
-    print('API Request: POST $url');
-    print('API Body: $body');
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
-      return _handleResponse(response);
-    } catch (e) {
-      return {'success': false, 'message': 'Connection error: $e'};
-    }
-  }
-
-  Future<Map<String, dynamic>> verifyOtp(String email, String otp) async {
-    final url = Uri.parse('$baseUrl/auth/verify-otp');
-    final body = jsonEncode({'email': email, 'otp': otp});
-
-    print('API Request: POST $url');
-    print('API Body: $body');
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
-      return _handleResponse(response);
-    } catch (e) {
-      return {'success': false, 'message': 'Connection error: $e'};
-    }
-  }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     print('API Response Status: ${response.statusCode}');

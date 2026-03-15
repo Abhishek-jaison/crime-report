@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   PoliceStation? _nearestStation;
   int _selectedIndex = 0;
   String? _userName;
+  String? _profilePicUrl;
   final ComplaintService _complaintService = ComplaintService();
   final SOSService _sosService = SOSService();
   List<dynamic> _recentComplaints = [];
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       _userName = prefs.getString('user_name');
+      _profilePicUrl = prefs.getString('profile_pic');
     });
     final email = prefs.getString('user_email');
     if (email != null) {
@@ -316,38 +318,34 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         GestureDetector(
           onTap: () {
-            // Switch to Profile Tab instead of pushing
             setState(() => _selectedIndex = 1);
           },
           child: Container(
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: const Color(0xFFE0CBA8), // Placeholder avatar color
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
-              image: const DecorationImage(
-                image: NetworkImage(
-                  "https://i.pravatar.cc/150?img=11",
-                ), // Mock image
-                fit: BoxFit.cover,
-              ),
             ),
-            child: Align(
-              alignment: Alignment.bottomRight,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
+            child: ClipOval(
+              child: _profilePicUrl != null
+                  ? Image.network(
+                      _profilePicUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildNoProfilePic(),
+                    )
+                  : _buildNoProfilePic(),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildNoProfilePic() {
+    return Container(
+      color: const Color(0xFFEEEEEE),
+      child: const Icon(Icons.person, size: 30, color: Color(0xFFBDBDBD)),
     );
   }
 

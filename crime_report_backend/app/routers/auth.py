@@ -19,28 +19,13 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/send-otp")
-def send_otp(request: schemas.OTPRequest, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=request.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    otp = crud.create_otp(db=db, email=request.email, fixed_otp="00000")
-    return {"message": "OTP sent successfully (Bypassed: 00000)"}
-
-@router.post("/verify-otp")
-def verify_otp(request: schemas.OTPVerify, db: Session = Depends(get_db)):
-    if crud.verify_otp(db=db, email=request.email, otp=request.otp):
-        return {"message": "Email verified successfully"}
-    else:
-        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
-
 @router.post("/signup", response_model=schemas.User)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-    if not crud.is_email_verified(db, user.email):
-         raise HTTPException(status_code=400, detail="Email not verified. Please verify OTP first.")
+    
+    # OTP verification removed
     return crud.create_user(db=db, user=user)
 
 @router.post("/login")

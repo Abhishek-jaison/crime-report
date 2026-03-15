@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:crimereport/core/services/auth_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,51 +14,24 @@ class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _otpController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _aadhaarController = TextEditingController();
 
   final AuthService _authService = AuthService();
   bool _isLoading = false;
-  bool _isOtpSent = false;
   bool _isAgreedToTerms = false;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-
-  Timer? _timer;
-  int _start = 60;
-  bool _canResend = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _otpController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _aadhaarController.dispose();
-    _timer?.cancel();
     super.dispose();
-  }
-
-  void _startTimer() {
-    setState(() {
-      _start = 60;
-      _canResend = false;
-    });
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_start == 0) {
-        setState(() {
-          _timer?.cancel();
-          _canResend = true;
-        });
-      } else {
-        setState(() {
-          _start--;
-        });
-      }
-    });
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
@@ -72,59 +44,21 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  Future<void> _sendOtp() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
-      _showSnackBar('Please enter a valid email address.', isError: true);
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    final result = await _authService.sendOtp(email);
-    setState(() => _isLoading = false);
-
-    if (result['success']) {
-      _showSnackBar('OTP Sent! Check your email.');
-      setState(() {
-        _isOtpSent = true;
-      });
-      _startTimer();
-    } else {
-      _showSnackBar(result['message'] ?? 'Failed to send OTP', isError: true);
-    }
-  }
-
   Future<void> _createAccount() async {
     if (_formKey.currentState!.validate()) {
       if (!_isAgreedToTerms) {
         _showSnackBar('You must agree to the Terms of Service', isError: true);
         return;
       }
-      if (!_isOtpSent) {
-        _showSnackBar('Please create and verify OTP first', isError: true);
-        return;
-      }
 
       setState(() => _isLoading = true);
 
-      // 1. Verify OTP
-      final verifyResult = await _authService.verifyOtp(
-        _emailController.text.trim(),
-        _otpController.text.trim(),
-      );
-
-      if (!verifyResult['success']) {
-        setState(() => _isLoading = false);
-        _showSnackBar(verifyResult['message'] ?? 'Invalid OTP', isError: true);
-        return;
-      }
-
-      // 2. Signup
+      // Signup directly
       final signupResult = await _authService.signup(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text.trim(),
-        "000000000000",
+        _aadhaarController.text.trim().isEmpty ? "000000000000" : _aadhaarController.text.trim(),
       );
 
       setState(() => _isLoading = false);
@@ -145,36 +79,6 @@ class _SignupScreenState extends State<SignupScreen> {
         );
       }
     }
-  }
-
-  Widget _buildOtpBox(int index) {
-    String char = "";
-    if (_otpController.text.length > index) {
-      char = _otpController.text[index];
-    }
-
-    bool isFocused = index == _otpController.text.length;
-
-    return Container(
-      width: 50,
-      height: 60,
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: char.isNotEmpty || isFocused
-              ? const Color(0xFF1E88E5)
-              : Colors.grey.shade300,
-          width: isFocused ? 2 : 1,
-        ),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.white,
-      ),
-      child: Center(
-        child: Text(
-          char,
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-      ),
-    );
   }
 
   @override
@@ -299,87 +203,14 @@ class _SignupScreenState extends State<SignupScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
-                      suffixIcon: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        child: TextButton(
-                          onPressed: (_isLoading || _isOtpSent && !_canResend)
-                              ? null
-                              : _sendOtp,
-                          style: TextButton.styleFrom(
-                            backgroundColor: const Color(0xFFE3F2FD),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            _isOtpSent && !_canResend ? "SENT" : "SEND OTP",
-                            style: TextStyle(
-                              color: const Color(0xFF1E88E5),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ),
                     ),
                     keyboardType: TextInputType.emailAddress,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // OTP Field
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "Verification Code",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF424242),
-                        ),
-                      ),
-                      if (_isOtpSent)
-                        Text(
-                          _canResend
-                              ? "Resend available"
-                              : "Resend in 0:${_start.toString().padLeft(2, '0')}",
-                          style: TextStyle(
-                            color: const Color(0xFF1E88E5),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Stack(
-                    children: [
-                      Opacity(
-                        opacity: 0.0,
-                        child: TextFormField(
-                          controller: _otpController,
-                          maxLength: 5,
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) => setState(() {}),
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(
-                          5,
-                          (index) => _buildOtpBox(index),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        "Enter the 5-digit code sent to your email",
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty || !value.contains('@')) {
+                        return 'Please enter a valid email address';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 24),
@@ -461,6 +292,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
                     ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty || value.length < 6) {
+                        return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 16),
@@ -503,6 +340,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         borderSide: BorderSide(color: Colors.grey.shade200),
                       ),
                     ),
+                    validator: (value) {
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
                   ),
 
                   const SizedBox(height: 24),
