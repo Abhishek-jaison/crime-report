@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from .. import schemas, crud, utils, database, models
 from ..utils_email import send_otp_email
 from ..database import SessionLocal
+from ..utils_cloudinary import upload_to_cloudinary
 
 router = APIRouter(
     prefix="/auth",
@@ -20,18 +21,10 @@ def get_db():
 
 @router.post("/send-otp")
 def send_otp(request: schemas.OTPRequest, db: Session = Depends(get_db)):
-    # Check if user already exists
     db_user = crud.get_user_by_email(db, email=request.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-        
     otp = crud.create_otp(db=db, email=request.email, fixed_otp="00000")
-    
-    # BYPASS EMAIL SENDING for Render reliability
-    # if send_otp_email(request.email, otp):
-    #     return {"message": "OTP sent successfully"}
-    # else:
-    #     raise HTTPException(status_code=500, detail="Failed to send email")
     return {"message": "OTP sent successfully (Bypassed: 00000)"}
 
 @router.post("/verify-otp")
@@ -43,15 +36,11 @@ def verify_otp(request: schemas.OTPVerify, db: Session = Depends(get_db)):
 
 @router.post("/signup", response_model=schemas.User)
 def signup(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    # 1. Check if user already exists
     db_user = crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
-        
-    # 2. Check if email is verified
     if not crud.is_email_verified(db, user.email):
          raise HTTPException(status_code=400, detail="Email not verified. Please verify OTP first.")
-         
     return crud.create_user(db=db, user=user)
 
 @router.post("/login")
@@ -59,18 +48,32 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
     print(f"DEBUG: Login attempt for email: '{user.email}'")
     db_user = crud.get_user_by_email(db, email=user.email)
     if not db_user:
-        print(f"DEBUG: Login failed - User not found for email: '{user.email}'")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-    
     if not utils.verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        
     return {
-        "message": "Login successful", 
+        "message": "Login successful",
         "user_id": db_user.id,
         "name": db_user.name,
-        "email": db_user.email
+        "email": db_user.email,
+        "profile_pic": db_user.profile_pic,
     }
+
+@router.post("/upload-profile-pic")
+def upload_profile_pic(
+    email: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Upload a profile picture for a user. Returns the Cloudinary URL."""
+    db_user = crud.get_user_by_email(db, email=email)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    url = upload_to_cloudinary(file, resource_type="image")
+    db_user.profile_pic = url
+    db.commit()
+    db.refresh(db_user)
+    return {"profile_pic": url, "message": "Profile picture updated successfully"}
 
 @router.get("/users", response_model=list[str])
 def get_all_user_emails(db: Session = Depends(get_db)):
@@ -90,13 +93,14 @@ def get_all_users_detail(db: Session = Depends(get_db)):
         .order_by(models.User.id.desc())
         .all()
     )
-    output = []
-    for user, count in results:
-        output.append(schemas.UserDetail(
+    return [
+        schemas.UserDetail(
             id=user.id,
             name=user.name,
             email=user.email,
+            profile_pic=user.profile_pic,
             created_at=user.created_at,
             complaint_count=count,
-        ))
-    return output
+        )
+        for user, count in results
+    ]

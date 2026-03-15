@@ -7,6 +7,7 @@ import 'package:floating_frosted_bottom_bar/floating_frosted_bottom_bar.dart';
 import 'package:crimereport/core/services/sos_service.dart';
 import 'package:crimereport/features/complaint/presentation/pages/complaint_registration_screen.dart';
 import 'package:crimereport/features/home/presentation/pages/crime_heatmap_screen.dart';
+import 'package:crimereport/features/home/presentation/pages/guidelines_screen.dart';
 import 'package:crimereport/core/services/police_station_service.dart';
 import 'package:crimereport/features/home/data/models/police_station_model.dart';
 import 'package:crimereport/features/profile/presentation/pages/profile_screen.dart';
@@ -465,8 +466,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: "Guidelines",
                 subtitle: "Legal Info",
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Guidelines Coming Soon")),
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const GuidelinesScreen(),
+                    ),
                   );
                 },
               ),

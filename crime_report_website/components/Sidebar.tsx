@@ -52,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
             src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJZTTBg9y8ouF9r9JutN65Mq8M6KzU55gUd1HtXhelN46qL5kuppIhK7ZyNacLlkSsuFUrKg9rqpKpdIQInvG8GM0_VSaxQGbu4cyIdsc2NVogl0J2_Gi5HJgmSfv9NvhOyrc6hkMn1uP_rCTh0mCj4nx_7YwUuKAr5yWp0Wd4XvnMuPFyaaeP215RKH5p11xKNLt90leFYHJ_odh2XlIIglRzFXQVVXWUkWfyAkzf3TvRddBYW1JniaR9Q20STI8PKoKOSpbW7bGh"
           />
           <div className="overflow-hidden">
-            <p className="text-sm font-semibold truncate text-slate-800 dark:text-white">Insp. James Miller</p>
+            <p className="text-sm font-semibold truncate text-slate-800 dark:text-white">Antony Jose</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Senior Admin</p>
           </div>
         </div>

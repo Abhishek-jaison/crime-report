@@ -45,6 +45,7 @@ class UserDetail(BaseModel):
     id: int
     name: str | None = None
     email: str
+    profile_pic: str | None = None
     created_at: datetime
     complaint_count: int = 0
 

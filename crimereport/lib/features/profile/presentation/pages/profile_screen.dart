@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crimereport/core/services/complaint_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crimereport/config/api_config.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -12,10 +16,12 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ComplaintService _complaintService = ComplaintService();
-  String _userName = "Loading...";
-  String _userEmail = "";
+  String _userName = 'Loading...';
+  String _userEmail = '';
+  String? _profilePicUrl;
   List<dynamic> _complaints = [];
   bool _isLoading = true;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -26,11 +32,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userName = prefs.getString('user_name') ?? "User";
-      _userEmail = prefs.getString('user_email') ?? "No Email";
+      _userName = prefs.getString('user_name') ?? 'User';
+      _userEmail = prefs.getString('user_email') ?? 'No Email';
+      _profilePicUrl = prefs.getString('profile_pic');
     });
 
-    if (_userEmail != "No Email") {
+    if (_userEmail != 'No Email') {
       try {
         final complaints = await _complaintService.getMyComplaints(_userEmail);
         if (mounted) {
@@ -44,6 +51,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } else {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickAndUploadProfilePic() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 75,
+      maxWidth: 800,
+    );
+    if (pickedFile == null) return;
+
+    setState(() => _isUploading = true);
+
+    try {
+      final file = File(pickedFile.path);
+      final uri = Uri.parse('${ApiConfig.baseUrl}/auth/upload-profile-pic');
+      final request = http.MultipartRequest('POST', uri);
+      request.fields['email'] = _userEmail;
+      request.files.add(await http.MultipartFile.fromPath('file', file.path));
+
+      final response = await request.send();
+      final body = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        // Parse URL from response
+        final urlMatch = RegExp(r'"profile_pic":"([^"]+)"').firstMatch(body);
+        final newUrl = urlMatch?.group(1);
+        if (newUrl != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('profile_pic', newUrl);
+          if (mounted) setState(() => _profilePicUrl = newUrl);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Profile picture updated!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      } else {
+        throw Exception('Upload failed: ${response.statusCode}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
   }
 
@@ -61,13 +120,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), // Light grey background
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: const Text(
-          "Profile",
+          'Profile',
           style: TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
@@ -105,6 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildReportsListHeader(),
                     const SizedBox(height: 16),
                     _buildReportsList(),
+                    const SizedBox(height: 80),
                   ],
                 ),
               ),
@@ -132,31 +192,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Stack(
             alignment: Alignment.bottomRight,
             children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                    ),
-                  ],
-                  image: const DecorationImage(
-                    image: NetworkImage("https://i.pravatar.cc/300?img=11"),
-                    fit: BoxFit.cover,
+              GestureDetector(
+                onTap: _pickAndUploadProfilePic,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: _isUploading
+                        ? Container(
+                            color: Colors.grey.shade100,
+                            child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                          )
+                        : _profilePicUrl != null
+                            ? Image.network(
+                                _profilePicUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => _buildNoPic(),
+                              )
+                            : _buildNoPic(),
                   ),
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1E88E5),
-                  shape: BoxShape.circle,
+              GestureDetector(
+                onTap: _pickAndUploadProfilePic,
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1E88E5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
                 ),
-                child: const Icon(Icons.edit, color: Colors.white, size: 16),
               ),
             ],
           ),
@@ -182,28 +255,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(
-                Icons.verified,
-                size: 16,
-                color: Colors.green, // Verified badge
-              ),
+              const Icon(Icons.verified, size: 16, color: Colors.green),
             ],
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE3F2FD),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _pickAndUploadProfilePic,
+            icon: const Icon(Icons.photo_camera_outlined, size: 18),
+            label: const Text('Change Profile Photo'),
+            style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF1E88E5),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: const Text(
-              "Edit Profile",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              backgroundColor: const Color(0xFFE3F2FD),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
             ),
           ),
         ],
@@ -211,14 +275,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildNoPic() {
+    return Container(
+      color: const Color(0xFFEEEEEE),
+      child: const Icon(Icons.person, size: 60, color: Color(0xFFBDBDBD)),
+    );
+  }
+
   Widget _buildStatsRow() {
     int total = _complaints.length;
-    int pending = _complaints
-        .where((c) => c['status'] == 'Pending' || c['status'] == null)
-        .length;
-    int reviewed = _complaints
-        .where((c) => c['status'] != 'Pending' && c['status'] != null)
-        .length;
+    int pending = _complaints.where((c) => c['status'] == 'Pending' || c['status'] == null).length;
+    int reviewed = _complaints.where((c) => c['status'] != 'Pending' && c['status'] != null).length;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
@@ -237,11 +304,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildStatItem("Reported", total.toString()),
+          _buildStatItem('Reported', total.toString()),
           Container(width: 1, height: 40, color: Colors.grey.shade300),
-          _buildStatItem("Reviewed", reviewed.toString()),
+          _buildStatItem('Reviewed', reviewed.toString()),
           Container(width: 1, height: 40, color: Colors.grey.shade300),
-          _buildStatItem("Pending", pending.toString()),
+          _buildStatItem('Pending', pending.toString()),
         ],
       ),
     );
@@ -252,46 +319,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E1E1E),
-          ),
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Colors.grey,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
       ],
     );
   }
 
   Widget _buildReportsListHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return const Row(
       children: [
-        const Text(
-          "My Crime Reports",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E1E1E),
-          ),
-        ),
-        TextButton(
-          onPressed: () {},
-          child: const Text(
-            "View All",
-            style: TextStyle(
-              color: Color(0xFF1E88E5),
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+        Text(
+          'My Crime Reports',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
         ),
       ],
     );
@@ -306,10 +347,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(Icons.folder_open, size: 48, color: Colors.grey.shade300),
               const SizedBox(height: 16),
-              const Text(
-                "No reports found",
-                style: TextStyle(color: Colors.grey),
-              ),
+              const Text('No reports found', style: TextStyle(color: Colors.grey)),
             ],
           ),
         ),
@@ -324,13 +362,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final complaint = _complaints[index];
         final title = complaint['title'] ?? 'No Title';
         final type = complaint['crime_type'] ?? 'General';
-
-        // Use CURRENT DATE as requested
-        final now = DateTime.now();
-        final formattedDate =
-            "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
-
         final status = complaint['status'] ?? 'Pending';
+        final createdAt = complaint['created_at'] != null
+            ? DateTime.tryParse(complaint['created_at'])
+            : null;
+        final dateStr = createdAt != null
+            ? '${createdAt.day.toString().padLeft(2, '0')} ${_monthName(createdAt.month)} ${createdAt.year}'
+            : 'Unknown date';
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -339,12 +377,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.05),
-                spreadRadius: 2,
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
+              BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 2, blurRadius: 10, offset: const Offset(0, 2)),
             ],
           ),
           child: Row(
@@ -352,15 +385,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.red.shade700,
-                  size: 24,
-                ),
+                decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
+                child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -373,32 +399,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(
                           child: Text(
                             title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF1E1E1E),
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E1E1E)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: status == 'Resolved'
-                                ? Colors.green.shade50
-                                : Colors.orange.shade50,
+                            color: status == 'Resolved' ? Colors.green.shade50 : Colors.orange.shade50,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             status,
                             style: TextStyle(
-                              color: status == 'Resolved'
-                                  ? Colors.green
-                                  : Colors.orange,
+                              color: status == 'Resolved' ? Colors.green : Colors.orange,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -407,30 +422,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      type,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF1E88E5),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(type, style: const TextStyle(fontSize: 13, color: Color(0xFF1E88E5), fontWeight: FontWeight.w500)),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.calendar_today,
-                          size: 12,
-                          color: Colors.grey,
-                        ),
+                        const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
                         const SizedBox(width: 4),
-                        Text(
-                          formattedDate,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
+                        Text(dateStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       ],
                     ),
                   ],
@@ -441,5 +439,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       },
     );
+  }
+
+  String _monthName(int month) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[month - 1];
   }
 }

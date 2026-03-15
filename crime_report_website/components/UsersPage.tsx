@@ -5,6 +5,7 @@ interface UserDetail {
   id: number;
   name: string | null;
   email: string;
+  profile_pic: string | null;
   created_at: string;
   complaint_count: number;
 }
@@ -47,10 +48,27 @@ const getInitials = (name: string | null, email: string) => {
   return email.slice(0, 2).toUpperCase();
 };
 
-const avatarColors = [
-  'bg-violet-500', 'bg-blue-500', 'bg-emerald-500',
-  'bg-amber-500', 'bg-pink-500', 'bg-indigo-500',
-];
+const UserAvatar: React.FC<{ user: UserDetail; size?: string }> = ({ user, size = 'w-10 h-10' }) => {
+  const [imgError, setImgError] = React.useState(false);
+  if (user.profile_pic && !imgError) {
+    return (
+      <img
+        src={user.profile_pic}
+        alt={user.name ?? user.email}
+        onError={() => setImgError(true)}
+        className={`${size} rounded-full object-cover flex-shrink-0 border-2 border-white shadow`}
+      />
+    );
+  }
+  // No-pic silhouette (WhatsApp-style gray person)
+  return (
+    <div className={`${size} rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center flex-shrink-0 border-2 border-white shadow`}>
+      <svg viewBox="0 0 24 24" className="w-3/5 h-3/5 text-slate-400 dark:text-slate-500" fill="currentColor">
+        <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+      </svg>
+    </div>
+  );
+};
 
 const UsersPage: React.FC = () => {
   const [users, setUsers] = useState<UserDetail[]>([]);
@@ -141,9 +159,7 @@ const UsersPage: React.FC = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className={`h-10 w-10 rounded-lg flex-shrink-0 flex items-center justify-center font-bold text-white text-sm ${avatarColors[idx % avatarColors.length]}`}>
-                            {getInitials(user.name, user.email)}
-                          </div>
+                          <UserAvatar user={user} size="w-10 h-10" />
                           <div>
                             <div className="text-sm font-semibold text-slate-900 dark:text-white">
                               {user.name || '(No Name)'}
@@ -175,11 +191,9 @@ const UsersPage: React.FC = () => {
         <section className="w-[450px] bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col shadow-sm animate-in slide-in-from-right duration-300">
           <div className="p-6 border-b border-slate-100 dark:border-slate-800 relative">
             <div className="flex flex-col items-center text-center">
-              <div className="relative mb-4">
-                <div className={`w-24 h-24 rounded-2xl flex items-center justify-center font-bold text-white text-3xl ring-4 ring-primary/10 ${avatarColors[users.indexOf(selectedUser) % avatarColors.length]}`}>
-                  {getInitials(selectedUser.name, selectedUser.email)}
+                <div className="relative mb-4">
+                  <UserAvatar user={selectedUser} size="w-24 h-24" />
                 </div>
-              </div>
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {selectedUser.name || '(No Name)'}
               </h2>
