@@ -84,6 +84,7 @@ def get_all_users_detail(db: Session = Depends(get_db)):
             name=user.name,
             email=user.email,
             profile_pic=user.profile_pic,
+            phone_number=user.phone_number,
             created_at=user.created_at,
             complaint_count=count,
         )
