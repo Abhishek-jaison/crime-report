@@ -61,6 +61,7 @@ const ALL_STATUSES = ['Any Status', 'Pending', 'Dispatched', 'Resolved', 'Termin
 const ReportsPage: React.FC = () => {
   const [reports, setReports] = useState<Complaint[]>([]);
   const [filtered, setFiltered] = useState<Complaint[]>([]);
+  const [userPhoneMap, setUserPhoneMap] = useState<Record<string, string>>({});
   const [selectedReport, setSelectedReport] = useState<Complaint | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -69,6 +70,19 @@ const ReportsPage: React.FC = () => {
 
   const fetchAll = () => {
     setLoading(true);
+    
+    // Fetch users to populate the phone numbers map
+    fetch(`${API_BASE_URL}/auth/users/all`)
+      .then(res => res.json())
+      .then((users: any[]) => {
+        const map: Record<string, string> = {};
+        users.forEach(u => {
+          if (u.phone_number) map[u.email] = u.phone_number;
+        });
+        setUserPhoneMap(map);
+      })
+      .catch(err => console.error('Failed to fetch user directory for phone numbers:', err));
+
     fetch(`${API_BASE_URL}/complaints/all`)
       .then(res => res.json())
       .then((data: Complaint[]) => {
@@ -241,6 +255,9 @@ const ReportsPage: React.FC = () => {
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Submitted By</p>
                     <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{selectedReport.user_email}</p>
+                    {userPhoneMap[selectedReport.user_email] && (
+                      <p className="text-xs font-mono text-slate-500 mt-0.5">{userPhoneMap[selectedReport.user_email]}</p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-800">

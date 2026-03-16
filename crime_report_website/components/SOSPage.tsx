@@ -40,11 +40,26 @@ const statusColor = (s: string) => {
 
 const SOSPage: React.FC = () => {
   const [alerts, setAlerts] = useState<SOSAlert[]>([]);
+  const [userPhoneMap, setUserPhoneMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<SOSAlert | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const fetchAlerts = () => {
+    // Fetch users once to populate the phone numbers map
+    if (Object.keys(userPhoneMap).length === 0) {
+      fetch(`${API_BASE_URL}/auth/users/all`)
+        .then(res => res.json())
+        .then((users: any[]) => {
+          const map: Record<string, string> = {};
+          users.forEach(u => {
+            if (u.phone_number) map[u.email] = u.phone_number;
+          });
+          setUserPhoneMap(map);
+        })
+        .catch(err => console.error('Failed to fetch user directory for SOS phone numbers:', err));
+    }
+
     fetch(`${API_BASE_URL}/sos/all`)
       .then(r => r.json())
       .then((data: SOSAlert[]) => {
@@ -217,6 +232,9 @@ const SOSPage: React.FC = () => {
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">Triggered By</p>
                   <p className="text-sm font-semibold text-slate-800 dark:text-white">{selected.user_email ?? 'Unknown'}</p>
+                  {selected.user_email && userPhoneMap[selected.user_email] && (
+                    <p className="text-xs font-mono text-slate-500 mt-0.5">{userPhoneMap[selected.user_email]}</p>
+                  )}
                 </div>
               </div>
 

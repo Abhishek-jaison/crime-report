@@ -6,6 +6,7 @@ interface UserDetail {
   name: string | null;
   email: string;
   profile_pic: string | null;
+  phone_number: string | null;
   created_at: string;
   complaint_count: number;
 }
@@ -165,6 +166,9 @@ const UsersPage: React.FC = () => {
                               {user.name || '(No Name)'}
                             </div>
                             <div className="text-xs text-slate-500">{user.email}</div>
+                            {user.phone_number && (
+                              <div className="text-[10px] text-slate-400 font-mono mt-0.5">{user.phone_number}</div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -197,8 +201,11 @@ const UsersPage: React.FC = () => {
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                 {selectedUser.name || '(No Name)'}
               </h2>
-              <p className="text-slate-500 text-sm">{selectedUser.email}</p>
-              <p className="text-slate-400 text-xs mt-1">Citizen ID: #{selectedUser.id}</p>
+              <p className="text-slate-500 text-sm mt-1">{selectedUser.email}</p>
+              {selectedUser.phone_number && (
+                 <p className="text-slate-500 font-mono text-sm mt-0.5">{selectedUser.phone_number}</p>
+              )}
+              <p className="text-slate-400 text-xs mt-2">Citizen ID: #{selectedUser.id}</p>
               <div className="mt-4 flex gap-2">
                 <button className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">View Dossier</button>
                 <button className="px-4 py-2 bg-primary/10 text-primary text-sm font-semibold rounded-lg hover:bg-primary/20 transition-colors">Contact</button>
