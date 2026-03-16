@@ -8,6 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crimereport/core/services/complaint_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
+import 'package:crimereport/l10n/app_localizations.dart';
 
 class ComplaintRegistrationScreen extends StatefulWidget {
   const ComplaintRegistrationScreen({super.key});
@@ -24,6 +25,7 @@ class _ComplaintRegistrationScreenState
   final _descriptionController = TextEditingController();
 
   String? _selectedCrimeType;
+  // Internal fixed values for backend, but we will localize them in the UI
   final List<String> _crimeTypes = ['Theft', 'Harassment', 'Assault', 'Other'];
 
   File? _selectedImage;
@@ -173,8 +175,8 @@ class _ComplaintRegistrationScreenState
         if (userEmail == null) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('User not logged in. Please login again.'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.errorNotLoggedIn),
               backgroundColor: Colors.red,
             ),
           );
@@ -203,8 +205,8 @@ class _ComplaintRegistrationScreenState
 
         if (result['success']) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Complaint Submitted Successfully!'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.successSubmitted),
               backgroundColor: Colors.green,
             ),
           );
@@ -222,7 +224,7 @@ class _ComplaintRegistrationScreenState
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Submission Failed'),
+              content: Text(result['message'] ?? AppLocalizations.of(context)!.errorFailed),
               backgroundColor: Colors.red,
             ),
           );
@@ -251,9 +253,9 @@ class _ComplaintRegistrationScreenState
           onPressed: () => Navigator.of(context).pop(),
         ),
         centerTitle: true,
-        title: const Text(
-          "Register Complaint",
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.registerComplaint,
+          style: const TextStyle(
             color: Color(0xFF1E1E1E),
             fontWeight: FontWeight.bold,
             fontSize: 18,
@@ -268,13 +270,13 @@ class _ComplaintRegistrationScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionHeader("INCIDENT DETAILS"),
+                _buildSectionHeader(AppLocalizations.of(context)!.incidentDetails),
                 const SizedBox(height: 16),
 
                 // Complaint Title
-                const Text(
-                  "Complaint Title",
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.complaintTitle,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF424242),
                   ),
@@ -283,18 +285,18 @@ class _ComplaintRegistrationScreenState
                 TextFormField(
                   controller: _titleController,
                   decoration: _buildInputDecoration(
-                    "Brief summary of incident",
+                    AppLocalizations.of(context)!.detailedSummary,
                   ),
                   validator: (value) => (value == null || value.isEmpty)
-                      ? 'Please enter a title'
+                      ? AppLocalizations.of(context)!.errorTitle
                       : null,
                 ),
                 const SizedBox(height: 16),
 
                 // Crime Type
-                const Text(
-                  "Crime Type",
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.crimeType,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF424242),
                   ),
@@ -303,13 +305,21 @@ class _ComplaintRegistrationScreenState
                 DropdownButtonFormField<String>(
                   value: _selectedCrimeType,
                   items: _crimeTypes.map((type) {
-                    return DropdownMenuItem(value: type, child: Text(type));
+                    // Localize crime types
+                    String label = type;
+                    final l10n = AppLocalizations.of(context)!;
+                    if (type == 'Theft') label = l10n.theft;
+                    else if (type == 'Harassment') label = l10n.harassment;
+                    else if (type == 'Assault') label = l10n.assault;
+                    else if (type == 'Other') label = l10n.other;
+                    
+                    return DropdownMenuItem(value: type, child: Text(label));
                   }).toList(),
                   onChanged: (value) =>
                       setState(() => _selectedCrimeType = value!),
-                  decoration: _buildInputDecoration("Select category"),
+                  decoration: _buildInputDecoration(AppLocalizations.of(context)!.selectCategory),
                   validator: (value) =>
-                      value == null ? 'Please select a crime type' : null,
+                      value == null ? AppLocalizations.of(context)!.errorCrimeType : null,
                   icon: const Icon(
                     Icons.keyboard_arrow_down,
                     color: Colors.grey,
@@ -317,7 +327,7 @@ class _ComplaintRegistrationScreenState
                 ),
 
                 const SizedBox(height: 24),
-                _buildSectionHeader("DETAILED DESCRIPTION"),
+                _buildSectionHeader(AppLocalizations.of(context)!.detailedDescription),
                 const SizedBox(height: 16),
 
                 // Description
@@ -325,19 +335,19 @@ class _ComplaintRegistrationScreenState
                   controller: _descriptionController,
                   maxLines: 5,
                   decoration: _buildInputDecoration(
-                    "Please provide as much detail as possible, including date, time, and location...",
+                    AppLocalizations.of(context)!.descriptionHint,
                   ).copyWith(contentPadding: const EdgeInsets.all(16)),
                   validator: (value) => (value == null || value.isEmpty)
-                      ? 'Please provide a description'
+                      ? AppLocalizations.of(context)!.errorDescription
                       : null,
                 ),
 
                 const SizedBox(height: 16),
                 
                 // Voice Note Recording (WhatsApp Style)
-                const Text(
-                  "Voice Note (Optional)",
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context)!.voiceNote,
+                  style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF424242),
                   ),
@@ -360,10 +370,10 @@ class _ComplaintRegistrationScreenState
                         if (_isRecording) ...[
                           const Icon(Icons.mic, color: Colors.red, size: 24),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              "Recording...",
-                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                              AppLocalizations.of(context)!.recording,
+                              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
                             ),
                           ),
                           GestureDetector(
@@ -382,7 +392,7 @@ class _ComplaintRegistrationScreenState
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              "Hold to record audio description",
+                              AppLocalizations.of(context)!.holdToRecord,
                               style: TextStyle(color: Colors.grey.shade600),
                             ),
                           ),
@@ -443,7 +453,7 @@ class _ComplaintRegistrationScreenState
                 ],
 
                 const SizedBox(height: 24),
-                _buildSectionHeader("EVIDENCE & ATTACHMENTS"),
+                _buildSectionHeader(AppLocalizations.of(context)!.evidenceAndAttachments),
                 const SizedBox(height: 16),
 
                 // Attachment Buttons
@@ -452,7 +462,7 @@ class _ComplaintRegistrationScreenState
                     Expanded(
                       child: _buildAttachmentButton(
                         icon: Icons.add_a_photo,
-                        label: "Add Photo",
+                        label: AppLocalizations.of(context)!.addPhoto,
                         onTap: _pickImage,
                         color: Colors.blue,
                       ),
@@ -461,7 +471,7 @@ class _ComplaintRegistrationScreenState
                     Expanded(
                       child: _buildAttachmentButton(
                         icon: Icons.videocam,
-                        label: "Add Video",
+                        label: AppLocalizations.of(context)!.addVideo,
                         onTap: _pickVideo,
                         color: Colors.blue,
                       ),
@@ -512,7 +522,7 @@ class _ComplaintRegistrationScreenState
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          "By submitting this report, you confirm that the information provided is accurate to the best of your knowledge. False reporting is a punishable offense.",
+                          AppLocalizations.of(context)!.confirmAccuracy,
                           style: TextStyle(
                             color: Colors.blueGrey.shade700,
                             fontSize: 12,
@@ -542,18 +552,18 @@ class _ComplaintRegistrationScreenState
                     ),
                     child: _isSubmitting
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Row(
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Submit Complaint",
-                                style: TextStyle(
+                                AppLocalizations.of(context)!.submitComplaint,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              SizedBox(width: 8),
-                              Icon(Icons.send, size: 18),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.send, size: 18),
                             ],
                           ),
                   ),

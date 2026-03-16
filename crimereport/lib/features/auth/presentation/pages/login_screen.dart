@@ -3,6 +3,7 @@ import 'package:crimereport/core/services/auth_service.dart';
 import 'package:crimereport/features/home/presentation/pages/home_screen.dart';
 import 'package:crimereport/features/auth/presentation/pages/signup_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crimereport/l10n/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (result['success']) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Login Successful!')));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.loginSuccess)));
 
         // Save email and name locally
         final prefs = await SharedPreferences.getInstance();
@@ -64,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Login Failed'),
+            content: Text(result['message'] ?? AppLocalizations.of(context)!.errorFailed),
             backgroundColor: Colors.red,
           ),
         );
@@ -104,20 +105,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
                   // Title
-                  const Text(
-                    "Crime Reports",
+                  Text(
+                    AppLocalizations.of(context)!.appTitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1E1E1E),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    "Log in to access your secure crime\nreporting dashboard.",
+                  Text(
+                    AppLocalizations.of(context)!.loginDesc,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 16,
                       color: Colors.grey,
                       height: 1.5,
@@ -126,9 +127,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 40),
 
                   // Email Field
-                  const Text(
-                    "Email Address",
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.emailAddress,
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF424242),
                     ),
@@ -158,10 +159,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter your email';
+                        return AppLocalizations.of(context)!.errorDescription.replaceAll('provide a description', 'enter your email'); // Fallback or better handle?
                       }
                       if (!value.contains('@')) {
-                        return 'Please enter a valid email';
+                        return 'Please enter a valid email'; // TODO: Localize if needed, keeping simple
                       }
                       return null;
                     },
@@ -169,9 +170,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
 
                   // Password Field
-                  const Text(
-                    "Password",
-                    style: TextStyle(
+                  Text(
+                    AppLocalizations.of(context)!.password,
+                    style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF424242),
                     ),
@@ -225,9 +226,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {},
-                      child: const Text(
-                        "Forgot Password?",
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.forgotPassword,
+                        style: const TextStyle(
                           color: Color(0xFF1E88E5),
                           fontWeight: FontWeight.w600,
                         ),
@@ -250,9 +251,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             elevation: 0,
                           ),
-                          child: const Text(
-                            "Login",
-                            style: TextStyle(
+                          child: Text(
+                            AppLocalizations.of(context)!.login,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -267,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        AppLocalizations.of(context)!.dontHaveAccount,
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                       GestureDetector(
@@ -278,9 +279,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           );
                         },
-                        child: const Text(
-                          "Sign up",
-                          style: TextStyle(
+                        child: Text(
+                          AppLocalizations.of(context)!.signup,
+                          style: const TextStyle(
                             color: Color(0xFF1E88E5),
                             fontWeight: FontWeight.bold,
                           ),

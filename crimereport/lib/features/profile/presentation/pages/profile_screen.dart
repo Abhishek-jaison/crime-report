@@ -6,6 +6,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:crimereport/core/services/complaint_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
 import 'package:crimereport/config/api_config.dart';
+import 'package:crimereport/l10n/app_localizations.dart';
+import 'package:crimereport/main.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,12 +18,20 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final ComplaintService _complaintService = ComplaintService();
-  String _userName = 'Loading...';
+  String _userName = '';
   String _userEmail = '';
   String? _profilePicUrl;
   List<dynamic> _complaints = [];
   bool _isLoading = true;
   bool _isUploading = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_userName.isEmpty) {
+      _userName = AppLocalizations.of(context)!.loading;
+    }
+  }
 
   @override
   void initState() {
@@ -32,12 +42,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _userName = prefs.getString('user_name') ?? 'User';
-      _userEmail = prefs.getString('user_email') ?? 'No Email';
+      _userName = prefs.getString('user_name') ?? AppLocalizations.of(context)!.user;
+      _userEmail = prefs.getString('user_email') ?? AppLocalizations.of(context)!.noEmail;
       _profilePicUrl = prefs.getString('profile_pic');
     });
 
-    if (_userEmail != 'No Email') {
+    if (_userEmail != AppLocalizations.of(context)!.noEmail) {
       try {
         final complaints = await _complaintService.getMyComplaints(_userEmail);
         if (mounted) {
@@ -85,8 +95,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (mounted) setState(() => _profilePicUrl = newUrl);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Profile picture updated!'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.profilePicUpdated),
                 backgroundColor: Colors.green,
               ),
             );
@@ -98,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('${AppLocalizations.of(context)!.uploadFailed}: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -108,13 +118,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
+    final String? languageCode = prefs.getString('language_code');
     await prefs.clear();
+    // Keep the language code after logout
+    if (languageCode != null) {
+      await prefs.setString('language_code', languageCode);
+    }
+    
     if (mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
     }
+  }
+
+  Future<void> _changeLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentLocale = localeNotifier.value.languageCode;
+    final newLocale = currentLocale == 'en' ? 'ml' : 'en';
+    
+    await prefs.setString('language_code', newLocale);
+    localeNotifier.value = Locale(newLocale);
   }
 
   @override
@@ -125,9 +150,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
+        title: Text(
+          AppLocalizations.of(context)!.profile,
+          style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -260,9 +285,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
           TextButton.icon(
-            onPressed: _pickAndUploadProfilePic,
-            icon: const Icon(Icons.photo_camera_outlined, size: 18),
-            label: const Text('Change Profile Photo'),
+            onPressed: _changeLanguage,
+            icon: const Icon(Icons.language, size: 18),
+            label: Text(AppLocalizations.of(context)!.changeLanguage),
             style: TextButton.styleFrom(
               foregroundColor: const Color(0xFF1E88E5),
               backgroundColor: const Color(0xFFE3F2FD),
@@ -304,11 +329,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildStatItem('Reported', total.toString()),
+          Expanded(child: _buildStatItem(AppLocalizations.of(context)!.reported, total.toString())),
           Container(width: 1, height: 40, color: Colors.grey.shade300),
-          _buildStatItem('Reviewed', reviewed.toString()),
+          Expanded(child: _buildStatItem(AppLocalizations.of(context)!.reviewed, reviewed.toString())),
           Container(width: 1, height: 40, color: Colors.grey.shade300),
-          _buildStatItem('Pending', pending.toString()),
+          Expanded(child: _buildStatItem(AppLocalizations.of(context)!.pending, pending.toString())),
         ],
       ),
     );
@@ -322,17 +347,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
         ),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
+        ),
       ],
     );
   }
 
   Widget _buildReportsListHeader() {
-    return const Row(
+    return Row(
       children: [
         Text(
-          'My Crime Reports',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
+          AppLocalizations.of(context)!.myCrimeReports,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
         ),
       ],
     );
@@ -347,7 +376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(Icons.folder_open, size: 48, color: Colors.grey.shade300),
               const SizedBox(height: 16),
-              const Text('No reports found', style: TextStyle(color: Colors.grey)),
+              Text(AppLocalizations.of(context)!.noReportsFound, style: const TextStyle(color: Colors.grey)),
             ],
           ),
         ),
@@ -367,8 +396,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ? DateTime.tryParse(complaint['created_at'])
             : null;
         final dateStr = createdAt != null
-            ? '${createdAt.day.toString().padLeft(2, '0')} ${_monthName(createdAt.month)} ${createdAt.year}'
-            : 'Unknown date';
+            ? '${createdAt.day.toString().padLeft(2, '0')} ${_monthName(createdAt.month, context)} ${createdAt.year}'
+            : AppLocalizations.of(context)!.unknownDate;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -441,8 +470,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  String _monthName(int month) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  String _monthName(int month, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final months = [l10n.jan, l10n.feb, l10n.mar, l10n.apr, l10n.may, l10n.jun, l10n.jul, l10n.aug, l10n.sep, l10n.oct, l10n.nov, l10n.dec];
     return months[month - 1];
   }
 }

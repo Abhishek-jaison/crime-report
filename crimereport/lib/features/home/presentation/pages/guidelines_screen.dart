@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:crimereport/l10n/app_localizations.dart';
 
 class GuidelinesScreen extends StatelessWidget {
   const GuidelinesScreen({super.key});
@@ -16,9 +17,9 @@ class GuidelinesScreen extends StatelessWidget {
             backgroundColor: const Color(0xFF1E88E5),
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
-              title: const Text(
-                'Safety & Legal Guidelines',
-                style: TextStyle(
+              title: Text(
+                AppLocalizations.of(context)!.guidelinesTitle,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -66,75 +67,75 @@ class GuidelinesScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionCard(
+                   _buildSectionCard(
                     icon: Icons.report_problem,
                     color: const Color(0xFF1E88E5),
-                    title: 'How to File a Complaint',
+                    title: AppLocalizations.of(context)!.howToFileTitle,
                     items: [
-                      'Open the app and tap "Register Complaint" from the home screen.',
-                      'Provide a clear, factual title and a detailed description of the incident.',
-                      'Select the appropriate crime type from the list (e.g., Theft, Assault).',
-                      'Attach relevant photos or video evidence if available.',
-                      'Submit the complaint — you will receive a case ID for tracking.',
-                      'You can track your complaint status in the Profile section.',
+                      AppLocalizations.of(context)!.howToFileStep1,
+                      AppLocalizations.of(context)!.howToFileStep2,
+                      AppLocalizations.of(context)!.howToFileStep3,
+                      AppLocalizations.of(context)!.howToFileStep4,
+                      AppLocalizations.of(context)!.howToFileStep5,
+                      AppLocalizations.of(context)!.howToFileStep6,
                     ],
                   ),
                   const SizedBox(height: 20),
                   _buildSectionCard(
                     icon: Icons.emergency,
                     color: Colors.red,
-                    title: 'Using the SOS Feature',
+                    title: AppLocalizations.of(context)!.sosFeatureTitle,
                     items: [
-                      'In life-threatening situations, use the SOS slider on the home screen.',
-                      'Slide fully to the right to trigger an emergency alert.',
-                      'Your GPS location is automatically shared with authorities.',
-                      'The SOS alert is dispatched to the nearest response team.',
-                      'Do NOT misuse the SOS feature — false alarms are a punishable offence.',
-                      'Ensure location permissions are enabled for SOS to work correctly.',
+                      AppLocalizations.of(context)!.sosStep1,
+                      AppLocalizations.of(context)!.sosStep2,
+                      AppLocalizations.of(context)!.sosStep3,
+                      AppLocalizations.of(context)!.sosStep4,
+                      AppLocalizations.of(context)!.sosStep5,
+                      AppLocalizations.of(context)!.sosStep6,
                     ],
                   ),
                   const SizedBox(height: 20),
                   _buildSectionCard(
                     icon: Icons.gavel,
                     color: const Color(0xFF7B1FA2),
-                    title: 'Your Legal Rights',
+                    title: AppLocalizations.of(context)!.legalRightsTitle,
                     items: [
-                      'You have the right to file a First Information Report (FIR) at any police station.',
-                      'FIR registration cannot be refused by police officers — it is your right.',
-                      'You may file a complaint online or in person at the nearest station.',
-                      'You have the right to receive a copy of the FIR free of charge.',
-                      'Witnesses and complainants are protected under Indian law from retaliation.',
-                      'If police refuse to file an FIR, approach the Superintendent of Police.',
+                      AppLocalizations.of(context)!.legalRightsStep1,
+                      AppLocalizations.of(context)!.legalRightsStep2,
+                      AppLocalizations.of(context)!.legalRightsStep3,
+                      AppLocalizations.of(context)!.legalRightsStep4,
+                      AppLocalizations.of(context)!.legalRightsStep5,
+                      AppLocalizations.of(context)!.legalRightsStep6,
                     ],
                   ),
                   const SizedBox(height: 20),
                   _buildSectionCard(
                     icon: Icons.privacy_tip,
                     color: const Color(0xFF2E7D32),
-                    title: 'Privacy & Data Protection',
+                    title: AppLocalizations.of(context)!.privacyTitle,
                     items: [
-                      'Your personal data is securely stored and encrypted.',
-                      'Your identity is not disclosed publicly. Only authorised officers see your details.',
-                      'Evidence (photos/videos) you upload is stored on secure cloud servers.',
-                      'You may request deletion of your account and associated data.',
-                      'We do not share your information with third parties.',
+                      AppLocalizations.of(context)!.privacyStep1,
+                      AppLocalizations.of(context)!.privacyStep2,
+                      AppLocalizations.of(context)!.privacyStep3,
+                      AppLocalizations.of(context)!.privacyStep4,
+                      AppLocalizations.of(context)!.privacyStep5,
                     ],
                   ),
                   const SizedBox(height: 20),
                   _buildSectionCard(
                     icon: Icons.warning_amber,
                     color: const Color(0xFFF57C00),
-                    title: 'Responsible Reporting',
+                    title: AppLocalizations.of(context)!.responsibleReportingTitle,
                     items: [
-                      'Only report genuine incidents — false complaints are a criminal offence.',
-                      'Provide accurate information to help authorities respond effectively.',
-                      'Do not include personal opinions; stick to facts and observable events.',
-                      'Filing false reports may result in legal action against the complainant.',
-                      'Complaints can be withdrawn, but this does not erase the record.',
+                      AppLocalizations.of(context)!.responsibleReportingStep1,
+                      AppLocalizations.of(context)!.responsibleReportingStep2,
+                      AppLocalizations.of(context)!.responsibleReportingStep3,
+                      AppLocalizations.of(context)!.responsibleReportingStep4,
+                      AppLocalizations.of(context)!.responsibleReportingStep5,
                     ],
                   ),
                   const SizedBox(height: 20),
-                  _buildEmergencyNumbers(),
+                  _buildEmergencyNumbers(context),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -253,12 +254,12 @@ class GuidelinesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmergencyNumbers() {
+  Widget _buildEmergencyNumbers(BuildContext context) {
     final numbers = [
-      {'label': 'Police', 'number': '100', 'icon': Icons.local_police, 'color': const Color(0xFF1E88E5)},
-      {'label': 'Ambulance', 'number': '108', 'icon': Icons.local_hospital, 'color': Colors.red},
-      {'label': 'Women Helpline', 'number': '1091', 'icon': Icons.support_agent, 'color': const Color(0xFF7B1FA2)},
-      {'label': 'Emergency', 'number': '112', 'icon': Icons.emergency, 'color': Colors.red.shade800},
+      {'label': AppLocalizations.of(context)!.policeLabel, 'number': '100', 'icon': Icons.local_police, 'color': const Color(0xFF1E88E5)},
+      {'label': AppLocalizations.of(context)!.ambulanceLabel, 'number': '108', 'icon': Icons.local_hospital, 'color': Colors.red},
+      {'label': AppLocalizations.of(context)!.womenHelpline, 'number': '1091', 'icon': Icons.support_agent, 'color': const Color(0xFF7B1FA2)},
+      {'label': AppLocalizations.of(context)!.emergencyLabel, 'number': '112', 'icon': Icons.emergency, 'color': Colors.red.shade800},
     ];
 
     return Container(
@@ -286,13 +287,13 @@ class GuidelinesScreen extends StatelessWidget {
                 topRight: Radius.circular(20),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.phone_in_talk, color: Colors.red, size: 22),
-                SizedBox(width: 12),
+                const Icon(Icons.phone_in_talk, color: Colors.red, size: 22),
+                const SizedBox(width: 12),
                 Text(
-                  'Emergency Contact Numbers',
-                  style: TextStyle(
+                  AppLocalizations.of(context)!.emergencyContactsTitle,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.red,

@@ -12,6 +12,7 @@ import 'package:crimereport/core/services/police_station_service.dart';
 import 'package:crimereport/features/home/data/models/police_station_model.dart';
 import 'package:crimereport/features/profile/presentation/pages/profile_screen.dart';
 import 'package:crimereport/core/services/complaint_service.dart';
+import 'package:crimereport/l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -80,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text("Location disabled")));
+        ).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.locationDisabled)));
       return;
     }
 
@@ -110,8 +111,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (mounted) {
             if (result['success']) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("SOS Alert Sent to Server!"),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.sosSent),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -151,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
       launchUrl(geoUrl);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Finding nearest station...")),
+        SnackBar(content: Text(AppLocalizations.of(context)!.findingStation)),
       );
       _fetchNearestPoliceStation().then((_) {
         if (_nearestStation != null) _openMapToStation();
@@ -297,9 +298,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              "Welcome back,",
-              style: TextStyle(
+            Text(
+              AppLocalizations.of(context)!.welcomeBack,
+              style: const TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
                 fontWeight: FontWeight.w500,
@@ -373,23 +374,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           const SizedBox(width: 16),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "System Status: Active",
-                style: TextStyle(
-                  color: Color(0xFF1565C0),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppLocalizations.of(context)!.systemStatusActive,
+                  style: const TextStyle(
+                    color: Color(0xFF1565C0),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                "3 active patrols in your vicinity.",
-                style: TextStyle(color: Color(0xFF546E7A), fontSize: 13),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  AppLocalizations.of(context)!.activePatrols,
+                  style: const TextStyle(color: Color(0xFF546E7A), fontSize: 13),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -407,8 +410,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.assignment,
                 color: Colors.blue.shade100,
                 iconColor: Colors.blue.shade800,
-                title: "Register",
-                subtitle: "Complaint",
+                title: AppLocalizations.of(context)!.register,
+                subtitle: AppLocalizations.of(context)!.complaint,
                 onTap: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(
@@ -427,8 +430,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.map,
                 color: Colors.lightBlue.shade50,
                 iconColor: Colors.blue.shade800,
-                title: "Heat Map",
-                subtitle: "Crime Zones",
+                title: AppLocalizations.of(context)!.heatMap,
+                subtitle: AppLocalizations.of(context)!.crimeZones,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -449,8 +452,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.local_police, // Shield icon replacement
                 color: Colors.blue.shade50,
                 iconColor: Colors.blue.shade800,
-                title: "Police",
-                subtitle: "Station Finder",
+                title: AppLocalizations.of(context)!.police,
+                subtitle: AppLocalizations.of(context)!.stationFinder,
                 onTap: _openMapToStation, // Use existing logic
               ),
             ),
@@ -461,8 +464,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icons.menu_book,
                 color: Colors.blue.shade50,
                 iconColor: Colors.blue.shade800,
-                title: "Guidelines",
-                subtitle: "Legal Info",
+                title: AppLocalizations.of(context)!.guidelines,
+                subtitle: AppLocalizations.of(context)!.legalInfo,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -526,10 +529,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E1E1E),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   subtitle,
                   style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -547,19 +554,21 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
-          "Recent Reports",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E1E1E),
+        Expanded(
+          child: Text(
+            AppLocalizations.of(context)!.recentReports,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1E1E1E),
+            ),
           ),
         ),
         TextButton(
           onPressed: () {},
-          child: const Text(
-            "See All",
-            style: TextStyle(
+          child: Text(
+            AppLocalizations.of(context)!.seeAll,
+            style: const TextStyle(
               color: Color(0xFF1E88E5),
               fontWeight: FontWeight.bold,
             ),
@@ -580,9 +589,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(Icons.folder_open, size: 40, color: Colors.grey.shade300),
             const SizedBox(height: 8),
-            const Text(
-              "No recent activity",
-              style: TextStyle(color: Colors.grey),
+            Text(
+              AppLocalizations.of(context)!.noRecentActivity,
+              style: const TextStyle(color: Colors.grey),
             ),
           ],
         ),

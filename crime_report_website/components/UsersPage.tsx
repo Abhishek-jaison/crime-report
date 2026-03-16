@@ -206,10 +206,6 @@ const UsersPage: React.FC = () => {
                  <p className="text-slate-500 font-mono text-sm mt-0.5">{selectedUser.phone_number}</p>
               )}
               <p className="text-slate-400 text-xs mt-2">Citizen ID: #{selectedUser.id}</p>
-              <div className="mt-4 flex gap-2">
-                <button className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/90 transition-colors">View Dossier</button>
-                <button className="px-4 py-2 bg-primary/10 text-primary text-sm font-semibold rounded-lg hover:bg-primary/20 transition-colors">Contact</button>
-              </div>
             </div>
           </div>
 
