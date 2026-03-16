@@ -28,6 +28,7 @@ class Complaint(BaseModel):
     user_email: str
     image_path: str | None = None
     video_path: str | None = None
+    audio_path: str | None = None
     status: str
     created_at: datetime
 

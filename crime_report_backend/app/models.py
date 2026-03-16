@@ -34,6 +34,7 @@ class Complaint(Base):
     user_email = Column(String, ForeignKey("users.email"))
     image_path = Column(String, nullable=True)
     video_path = Column(String, nullable=True)
+    audio_path = Column(String, nullable=True)
     status = Column(String, default="Pending")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

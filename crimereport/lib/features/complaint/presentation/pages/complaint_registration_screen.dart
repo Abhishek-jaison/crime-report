@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:record/record.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:crimereport/core/services/complaint_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
 
@@ -25,14 +28,40 @@ class _ComplaintRegistrationScreenState
 
   File? _selectedImage;
   File? _selectedVideo;
+  File? _recordedAudio;
 
   final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
+
+  // Audio Recording states
+  late final AudioRecorder _audioRecorder;
+  late final AudioPlayer _audioPlayer;
+  bool _isRecording = false;
+  bool _isPlaying = false;
+  String? _audioPath;
+
+  @override
+  void initState() {
+    super.initState();
+    _audioRecorder = AudioRecorder();
+    _audioPlayer = AudioPlayer();
+    
+    // Listen to player state changes
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state == PlayerState.playing;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _audioRecorder.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -72,6 +101,65 @@ class _ComplaintRegistrationScreenState
     });
   }
 
+  // --- Audio Recording Logic ---
+
+  Future<void> _startRecording() async {
+    try {
+      if (await _audioRecorder.hasPermission()) {
+        final directory = await getApplicationDocumentsDirectory();
+        final path = '${directory.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        
+        await _audioRecorder.start(
+          const RecordConfig(encoder: AudioEncoder.aacLc),
+          path: path,
+        );
+        setState(() {
+          _isRecording = true;
+          _recordedAudio = null;
+          _audioPath = null;
+        });
+      }
+    } catch (e) {
+      debugPrint("Recording error: $e");
+    }
+  }
+
+  Future<void> _stopRecording() async {
+    try {
+      final path = await _audioRecorder.stop();
+      if (path != null) {
+        setState(() {
+          _isRecording = false;
+          _audioPath = path;
+          _recordedAudio = File(path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Stop recording error: $e");
+    }
+  }
+
+  Future<void> _playAudio() async {
+    if (_audioPath != null) {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+      } else {
+        await _audioPlayer.play(DeviceFileSource(_audioPath!));
+      }
+    }
+  }
+
+  void _removeAudio() {
+    setState(() {
+      _audioPath = null;
+      _recordedAudio = null;
+      _isPlaying = false;
+    });
+    _audioPlayer.stop();
+  }
+
+  // -----------------------------
+
   Future<void> _submitComplaint() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
@@ -104,6 +192,7 @@ class _ComplaintRegistrationScreenState
           userEmail: userEmail,
           image: _selectedImage,
           video: _selectedVideo,
+          audio: _recordedAudio,
         );
 
         if (!mounted) return;
@@ -126,6 +215,8 @@ class _ComplaintRegistrationScreenState
           setState(() {
             _selectedImage = null;
             _selectedVideo = null;
+            _recordedAudio = null;
+            _audioPath = null;
             _selectedCrimeType = null;
           });
         } else {
@@ -240,6 +331,116 @@ class _ComplaintRegistrationScreenState
                       ? 'Please provide a description'
                       : null,
                 ),
+
+                const SizedBox(height: 16),
+                
+                // Voice Note Recording (WhatsApp Style)
+                const Text(
+                  "Voice Note (Optional)",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF424242),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                
+                if (_recordedAudio == null) ...[
+                  // Recording UI
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: _isRecording ? Colors.red.shade50 : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: _isRecording ? Colors.red.shade200 : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        if (_isRecording) ...[
+                          const Icon(Icons.mic, color: Colors.red, size: 24),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              "Recording...",
+                              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _stopRecording,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.red,
+                              ),
+                              child: const Icon(Icons.stop, color: Colors.white, size: 20),
+                            ),
+                          ),
+                        ] else ...[
+                          const Icon(Icons.mic_none, color: Colors.grey, size: 24),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Hold to record audio description",
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: _startRecording,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF1E88E5),
+                              ),
+                              child: const Icon(Icons.mic, color: Colors.white, size: 20),
+                            ),
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  // Playback UI
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE3F2FD),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: const Color(0xFF1E88E5)),
+                    ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: _playAudio,
+                          child: Icon(
+                            _isPlaying ? Icons.pause_circle_filled : Icons.play_circle_fill,
+                            color: const Color(0xFF1E88E5),
+                            size: 36,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          // Simple visualizer placeholder
+                          child: Row(
+                            children: [
+                              _AudioBar(height: 12), _AudioBar(height: 18), _AudioBar(height: 24),
+                              _AudioBar(height: 14), _AudioBar(height: 20), _AudioBar(height: 10),
+                              _AudioBar(height: 16), _AudioBar(height: 22), _AudioBar(height: 14),
+                              _AudioBar(height: 18), _AudioBar(height: 10), _AudioBar(height: 16),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: _removeAudio,
+                          child: const Icon(Icons.delete_outline, color: Colors.red, size: 24),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 24),
                 _buildSectionHeader("EVIDENCE & ATTACHMENTS"),
@@ -475,6 +676,24 @@ class _ComplaintRegistrationScreenState
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AudioBar extends StatelessWidget {
+  final double height;
+  const _AudioBar({required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      width: 3,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E88E5).withOpacity(0.6),
+        borderRadius: BorderRadius.circular(2),
+      ),
     );
   }
 }

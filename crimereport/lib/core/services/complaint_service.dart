@@ -15,6 +15,7 @@ class ComplaintService {
     required String userEmail,
     File? image,
     File? video,
+    File? audio,
   }) async {
     final url = Uri.parse('$baseUrl/complaints/');
 
@@ -54,6 +55,19 @@ class ComplaintService {
           stream,
           length,
           filename: path.basename(video.path),
+        );
+        request.files.add(multipartFile);
+      }
+
+      // Add audio
+      if (audio != null) {
+        var stream = http.ByteStream(audio.openRead());
+        var length = await audio.length();
+        var multipartFile = http.MultipartFile(
+          'audio',
+          stream,
+          length,
+          filename: path.basename(audio.path),
         );
         request.files.add(multipartFile);
       }

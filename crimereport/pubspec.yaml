@@ -42,6 +42,9 @@ dependencies:
   latlong2: ^0.9.1
   flutter_map_heatmap: ^0.0.8
   floating_frosted_bottom_bar: ^0.0.1
+  record: ^6.2.0
+  audioplayers: ^6.6.0
+  path_provider: ^2.1.5
 
 dev_dependencies:
   flutter_test:

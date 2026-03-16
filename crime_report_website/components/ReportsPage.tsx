@@ -9,6 +9,7 @@ interface Complaint {
   user_email: string;
   image_path: string | null;
   video_path: string | null;
+  audio_path: string | null;
   status: string;
   created_at: string;
 }
@@ -252,7 +253,7 @@ const ReportsPage: React.FC = () => {
               </div>
 
               {/* Evidence */}
-              {(selectedReport.image_path || selectedReport.video_path) ? (
+              {(selectedReport.image_path || selectedReport.video_path || selectedReport.audio_path) ? (
                 <div>
                   <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
                     <span className="material-icons text-base">photo_library</span>
@@ -274,10 +275,20 @@ const ReportsPage: React.FC = () => {
                     )}
                     {selectedReport.video_path && (
                       <a href={selectedReport.video_path} target="_blank" rel="noopener noreferrer"
-                        className="relative flex items-center justify-center h-28 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden cursor-pointer group">
+                        className="relative flex items-center justify-center h-28 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden cursor-pointer group mb-3">
                         <span className="material-icons text-white text-5xl group-hover:scale-110 transition-transform">play_circle</span>
                         <p className="text-xs text-slate-400 absolute bottom-3 left-3">Click to open video</p>
                       </a>
+                    )}
+                    {selectedReport.audio_path && (
+                      <div className="w-full bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <p className="text-xs font-bold text-slate-500 mb-2 uppercase tracking-tight flex items-center gap-1.5">
+                          <span className="material-icons text-sm">mic</span> Voice Note Description
+                        </p>
+                        <audio controls className="w-full h-10 outline-none" src={selectedReport.audio_path}>
+                          Your browser does not support the audio element.
+                        </audio>
+                      </div>
                     )}
                   </div>
                 </div>

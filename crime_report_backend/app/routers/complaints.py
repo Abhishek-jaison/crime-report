@@ -23,6 +23,7 @@ def create_complaint(
     user_email: str = Form(...),
     image: UploadFile = File(None),
     video: UploadFile = File(None),
+    audio: UploadFile = File(None),
     db: Session = Depends(database.get_db)
 ):
     # Robust lookup using CRUD
@@ -37,6 +38,7 @@ def create_complaint(
 
     image_path = None
     video_path = None
+    audio_path = None
 
     from ..utils_cloudinary import upload_to_cloudinary
 
@@ -49,6 +51,12 @@ def create_complaint(
         print(f"DEBUG: Uploading video to Cloudinary...")
         video_path = upload_to_cloudinary(video, resource_type="video")
         print(f"DEBUG: Video uploaded: {video_path}")
+        
+    if audio:
+        print(f"DEBUG: Uploading audio to Cloudinary...")
+        # Cloudinary handles audio files under the "video" resource_type
+        audio_path = upload_to_cloudinary(audio, resource_type="video") 
+        print(f"DEBUG: Audio uploaded: {audio_path}")
 
     new_complaint = models.Complaint(
         title=title,
@@ -57,6 +65,7 @@ def create_complaint(
         user_email=user_email,
         image_path=image_path,
         video_path=video_path,
+        audio_path=audio_path,
         status="Pending"
     )
     
