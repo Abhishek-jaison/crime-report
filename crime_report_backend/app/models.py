@@ -11,6 +11,7 @@ class User(Base):
     name = Column(String, nullable=True)
     email = Column(String, unique=True, index=True)
     aadhaar_number = Column(String, nullable=True)
+    phone_number = Column(String, nullable=True)
     hashed_password = Column(String)
     profile_pic = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

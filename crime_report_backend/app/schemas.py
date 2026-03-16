@@ -8,6 +8,7 @@ class UserCreate(UserBase):
     name: str | None = None
     password: str
     aadhaar_number: str | None = None
+    phone_number: str | None = None
 
 class UserLogin(UserBase):
     password: str

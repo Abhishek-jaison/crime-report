@@ -11,6 +11,7 @@ class AuthService {
     String email,
     String password,
     String aadhaarNumber,
+    String phoneNumber,
   ) async {
     final url = Uri.parse('$baseUrl/auth/signup');
     final body = jsonEncode({
@@ -18,6 +19,7 @@ class AuthService {
       'email': email,
       'password': password,
       'aadhaar_number': aadhaarNumber,
+      'phone_number': phoneNumber,
     });
 
     print('API Request: POST $url');

@@ -17,6 +17,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _aadhaarController = TextEditingController();
+  final _phoneController = TextEditingController();
 
   final AuthService _authService = AuthService();
   bool _isLoading = false;
@@ -31,6 +32,7 @@ class _SignupScreenState extends State<SignupScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _aadhaarController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -59,6 +61,7 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailController.text.trim(),
         _passwordController.text.trim(),
         _aadhaarController.text.trim().isEmpty ? "000000000000" : _aadhaarController.text.trim(),
+        "+91${_phoneController.text.trim()}",
       );
 
       setState(() => _isLoading = false);
@@ -249,6 +252,54 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (value == null || value.isEmpty)
                         return 'Enter Aadhaar Number';
                       if (value.length != 12) return 'Must be 12 digits';
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Phone Number Field
+                  const Text(
+                    "Phone Number",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF424242),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _phoneController,
+                    decoration: InputDecoration(
+                      prefixText: "+91 ",
+                      prefixStyle: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      hintText: "12345 67890",
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                    keyboardType: TextInputType.phone,
+                    validator: (value) {
+                      if (value == null || value.isEmpty)
+                        return 'Enter Phone Number';
+                      // Remove any spaces the user might have entered
+                      final digitsOnly = value.replaceAll(RegExp(r'\s+'), '');
+                      if (digitsOnly.length != 10) return 'Must be exactly 10 digits';
                       return null;
                     },
                   ),
