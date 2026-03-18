@@ -424,4 +424,11 @@ class AppLocalizationsMl extends AppLocalizations {
 
   @override
   String get dec => 'ഡിസം';
+
+  @override
+  String get suspectDetails => 'പ്രതിയുടെ വിവരങ്ങൾ (ഓപ്ഷണൽ)';
+
+  @override
+  String get suspectDetailsHint =>
+      'പ്രതിയെക്കുറിച്ചുള്ള എന്തെങ്കിലും വിവരങ്ങൾ...';
 }

@@ -120,5 +120,7 @@
   "uploadFailed": "Upload failed",
   "unknownDate": "Unknown date",
   "jan": "Jan", "feb": "Feb", "mar": "Mar", "apr": "Apr", "may": "May", "jun": "Jun",
-  "jul": "Jul", "aug": "Aug", "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec"
+  "jul": "Jul", "aug": "Aug", "sep": "Sep", "oct": "Oct", "nov": "Nov", "dec": "Dec",
+  "suspectDetails": "Suspect Details (Optional)",
+  "suspectDetailsHint": "Any known information about the suspect..."
 }

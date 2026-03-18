@@ -865,6 +865,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Dec'**
   String get dec;
+
+  /// No description provided for @suspectDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Suspect Details (Optional)'**
+  String get suspectDetails;
+
+  /// No description provided for @suspectDetailsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Any known information about the suspect...'**
+  String get suspectDetailsHint;
 }
 
 class _AppLocalizationsDelegate

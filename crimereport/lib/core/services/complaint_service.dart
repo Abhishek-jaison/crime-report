@@ -16,6 +16,9 @@ class ComplaintService {
     File? image,
     File? video,
     File? audio,
+    String? lat,
+    String? long,
+    String? suspectDetails,
   }) async {
     final url = Uri.parse('$baseUrl/complaints/');
 
@@ -32,6 +35,10 @@ class ComplaintService {
       request.fields['description'] = description;
       request.fields['crime_type'] = crimeType;
       request.fields['user_email'] = userEmail;
+      
+      if (lat != null) request.fields['lat'] = lat;
+      if (long != null) request.fields['long'] = long;
+      if (suspectDetails != null) request.fields['suspect_details'] = suspectDetails;
 
       // Add image
       if (image != null) {

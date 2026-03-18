@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../constants';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface Complaint {
   id: number;
@@ -10,6 +12,9 @@ interface Complaint {
   image_path: string | null;
   video_path: string | null;
   audio_path: string | null;
+  lat: string | null;
+  long: string | null;
+  suspect_details: string | null;
   status: string;
   created_at: string;
 }
@@ -65,6 +70,7 @@ const ReportsPage: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<Complaint | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [generatingFIR, setGeneratingFIR] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All Types');
   const [statusFilter, setStatusFilter] = useState('Any Status');
 
@@ -121,6 +127,108 @@ const ReportsPage: React.FC = () => {
       console.error('Status update failed:', e);
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const generateFIR = async (report: Complaint) => {
+    setGeneratingFIR(true);
+    try {
+      let addressString = "Location coordinates not provided.";
+      if (report.lat && report.long) {
+        try {
+          // Reverse geocoding using Nominatim
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${report.lat}&lon=${report.long}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.display_name) {
+              addressString = data.display_name;
+            } else {
+              addressString = `Lat: ${report.lat}, Long: ${report.long}`;
+            }
+          } else {
+            addressString = `Lat: ${report.lat}, Long: ${report.long}`;
+          }
+        } catch (e) {
+          console.error("Geocoding failed", e);
+          addressString = `Lat: ${report.lat}, Long: ${report.long}`;
+        }
+      }
+
+      const phoneNumber = userPhoneMap[report.user_email] || "Not provided";
+      const doc = new jsPDF();
+
+      // Header
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text("FIRST INFORMATION REPORT (FIR)", 105, 20, { align: "center" });
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 28, { align: "center" });
+      doc.line(14, 32, 196, 32);
+
+      // Report Details Table
+      autoTable(doc, {
+        startY: 40,
+        head: [['Field', 'Details']],
+        body: [
+          ['Complaint ID', `#${report.id}`],
+          ['Crime Type', report.crime_type],
+          ['Date of Report', formatDate(report.created_at)],
+          ['Incident Location', addressString],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 64, 175] },
+        styles: { fontSize: 10, cellPadding: 4 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { cellWidth: 'auto' } }
+      });
+
+      // Complainant Details Table
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [['Complainant Information', '']],
+        body: [
+          ['Email', report.user_email],
+          ['Phone Number', phoneNumber],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 64, 175] },
+        styles: { fontSize: 10, cellPadding: 4 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { cellWidth: 'auto' } }
+      });
+
+      // Suspect Details Table
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable.finalY + 10,
+        head: [['Suspect Details', '']],
+        body: [
+          ['Information', report.suspect_details || 'Not provided by complainant'],
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [220, 38, 38] }, // Red header for suspect
+        styles: { fontSize: 10, cellPadding: 4 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { cellWidth: 'auto' } }
+      });
+
+      // Description
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Incident Description:", 14, finalY);
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const splitDescription = doc.splitTextToSize(report.description, 180);
+      doc.text(splitDescription, 14, finalY + 8);
+
+      // Save
+      doc.save(`FIR_Report_${report.id}.pdf`);
+      
+    } catch (error) {
+      console.error("Failed to generate FIR:", error);
+      alert("Failed to generate FIR. Please try again.");
+    } finally {
+      setGeneratingFIR(false);
     }
   };
 
@@ -367,6 +475,22 @@ const ReportsPage: React.FC = () => {
                 >
                   <span className="material-icons text-base">cancel</span>
                   Terminate
+                </button>
+              </div>
+
+              {/* Download FIR Button */}
+              <div className="grid grid-cols-1 mt-2">
+                <button
+                  disabled={generatingFIR}
+                  onClick={() => generateFIR(selectedReport)}
+                  className="w-full px-3 py-3 bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg hover:bg-slate-900 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-md shadow-slate-900/20"
+                >
+                  {generatingFIR ? (
+                    <span className="material-icons text-base animate-spin">refresh</span>
+                  ) : (
+                    <span className="material-icons text-base">picture_as_pdf</span>
+                  )}
+                  {generatingFIR ? 'Generating FIR...' : 'Download Official FIR'}
                 </button>
               </div>
 

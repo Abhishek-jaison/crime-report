@@ -422,4 +422,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dec => 'Dec';
+
+  @override
+  String get suspectDetails => 'Suspect Details (Optional)';
+
+  @override
+  String get suspectDetailsHint => 'Any known information about the suspect...';
 }

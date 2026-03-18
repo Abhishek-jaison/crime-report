@@ -35,6 +35,9 @@ class Complaint(Base):
     image_path = Column(String, nullable=True)
     video_path = Column(String, nullable=True)
     audio_path = Column(String, nullable=True)
+    lat = Column(String, nullable=True)
+    long = Column(String, nullable=True)
+    suspect_details = Column(String, nullable=True)
     status = Column(String, default="Pending")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     

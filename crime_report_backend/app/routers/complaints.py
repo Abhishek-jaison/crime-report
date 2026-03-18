@@ -24,6 +24,9 @@ def create_complaint(
     image: UploadFile = File(None),
     video: UploadFile = File(None),
     audio: UploadFile = File(None),
+    lat: str = Form(None),
+    long: str = Form(None),
+    suspect_details: str = Form(None),
     db: Session = Depends(database.get_db)
 ):
     # Robust lookup using CRUD
@@ -66,6 +69,9 @@ def create_complaint(
         image_path=image_path,
         video_path=video_path,
         audio_path=audio_path,
+        lat=lat,
+        long=long,
+        suspect_details=suspect_details,
         status="Pending"
     )
     

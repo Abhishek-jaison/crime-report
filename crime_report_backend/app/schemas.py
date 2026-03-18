@@ -29,6 +29,9 @@ class Complaint(BaseModel):
     image_path: str | None = None
     video_path: str | None = None
     audio_path: str | None = None
+    lat: str | None = None
+    long: str | None = None
+    suspect_details: str | None = None
     status: str
     created_at: datetime
 

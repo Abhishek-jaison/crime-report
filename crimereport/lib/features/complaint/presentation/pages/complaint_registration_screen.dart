@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:crimereport/core/services/complaint_service.dart';
 import 'package:crimereport/features/auth/presentation/pages/login_screen.dart';
 import 'package:crimereport/l10n/app_localizations.dart';
@@ -23,6 +24,7 @@ class _ComplaintRegistrationScreenState
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _suspectDetailsController = TextEditingController();
 
   String? _selectedCrimeType;
   // Internal fixed values for backend, but we will localize them in the UI
@@ -62,6 +64,7 @@ class _ComplaintRegistrationScreenState
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _suspectDetailsController.dispose();
     _audioRecorder.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -186,6 +189,28 @@ class _ComplaintRegistrationScreenState
           return;
         }
 
+        String? lat;
+        String? long;
+        try {
+          bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+          if (serviceEnabled) {
+            LocationPermission permission = await Geolocator.checkPermission();
+            if (permission == LocationPermission.denied) {
+              permission = await Geolocator.requestPermission();
+            }
+            if (permission == LocationPermission.whileInUse ||
+                permission == LocationPermission.always) {
+              Position position = await Geolocator.getCurrentPosition(
+                desiredAccuracy: LocationAccuracy.medium,
+              );
+              lat = position.latitude.toString();
+              long = position.longitude.toString();
+            }
+          }
+        } catch (e) {
+          debugPrint("Could not fetch location for complaint: $e");
+        }
+
         final complaintService = ComplaintService();
         final result = await complaintService.submitComplaint(
           title: _titleController.text.trim(),
@@ -195,6 +220,11 @@ class _ComplaintRegistrationScreenState
           image: _selectedImage,
           video: _selectedVideo,
           audio: _recordedAudio,
+          lat: lat,
+          long: long,
+          suspectDetails: _suspectDetailsController.text.trim().isNotEmpty 
+              ? _suspectDetailsController.text.trim() 
+              : null,
         );
 
         if (!mounted) return;
@@ -214,6 +244,7 @@ class _ComplaintRegistrationScreenState
           _formKey.currentState!.reset();
           _titleController.clear();
           _descriptionController.clear();
+          _suspectDetailsController.clear();
           setState(() {
             _selectedImage = null;
             _selectedVideo = null;
@@ -340,6 +371,25 @@ class _ComplaintRegistrationScreenState
                   validator: (value) => (value == null || value.isEmpty)
                       ? AppLocalizations.of(context)!.errorDescription
                       : null,
+                ),
+
+                const SizedBox(height: 16),
+                
+                // Suspect Details
+                Text(
+                  AppLocalizations.of(context)!.suspectDetails,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF424242),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _suspectDetailsController,
+                  maxLines: 2,
+                  decoration: _buildInputDecoration(
+                    AppLocalizations.of(context)!.suspectDetailsHint,
+                  ).copyWith(contentPadding: const EdgeInsets.all(16)),
                 ),
 
                 const SizedBox(height: 16),
