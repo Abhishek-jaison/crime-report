@@ -61,3 +61,42 @@ def get_tables():
         return {"tables": tables}
     except Exception as e:
         return {"error": str(e)}
+
+@router.get("/migrate-fir")
+def migrate_fir_columns(db: Session = Depends(database.get_db)):
+    """
+    Run this endpoint ONCE to add the new FIR columns to a persistent production database (e.g., Postgres on Render).
+    """
+    results = []
+    
+    # Try adding lat
+    try:
+        db.execute(text("ALTER TABLE complaints ADD COLUMN lat VARCHAR;"))
+        db.commit()
+        results.append("Added 'lat' column.")
+    except Exception as e:
+        db.rollback()
+        results.append(f"Could not add 'lat': {str(e)[:50]}")
+
+    # Try adding long
+    try:
+        db.execute(text("ALTER TABLE complaints ADD COLUMN \"long\" VARCHAR;"))
+        db.commit()
+        results.append("Added 'long' column.")
+    except Exception as e:
+        db.rollback()
+        results.append(f"Could not add 'long': {str(e)[:50]}")
+        
+    # Try adding suspect_details
+    try:
+        db.execute(text("ALTER TABLE complaints ADD COLUMN suspect_details VARCHAR;"))
+        db.commit()
+        results.append("Added 'suspect_details' column.")
+    except Exception as e:
+        db.rollback()
+        results.append(f"Could not add 'suspect_details': {str(e)[:50]}")
+
+    return {
+        "status": "Migration script executed. Columns might have already existed if you see errors.",
+        "results": results
+    }
